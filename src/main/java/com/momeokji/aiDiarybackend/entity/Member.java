@@ -12,12 +12,12 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
-@Table(name = "user")
-public class User {
+@Table(name = "member")
+public class Member {
 
 	@Id
-	@Column(name = "user_id")
-	private String userId;
+	@Column(name = "member_id")
+	private String memberId;
 
 	@Column(name = "device_id")
 	private String deviceId;
@@ -29,11 +29,11 @@ public class User {
 	private String osType;
 
 	@Builder
-	public User(String deviceId, String osType, String preference, String userId) {
+	public Member(String deviceId, String osType, String preference, String memberId) {
 		this.deviceId = deviceId;
 		this.osType = osType;
 		this.preference = preference;
-		this.userId = userId;
+		this.memberId = memberId;
 	}
 
 
