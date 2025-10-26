@@ -1,26 +1,36 @@
 package com.momeokji.aiDiarybackend.dto.request;
 
-import java.util.List;
-
-import jakarta.validation.constraints.NotBlank;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.jackson.Jacksonized;
 
-@Builder
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.util.List;
+
 @Getter
+@Builder
+@Jacksonized
 public class DiaryGenerateRequestDto {
-	@NotBlank
-	private String userId;
 
-	private List<Qna> targetSet;
+	@NotNull
+	@Size(min = 1)
+	@JsonProperty("target_set")
+	private final List<Qna> targetSet;
 
-
-	@Getter @Builder
+	@Getter
+	@Builder
+	@Jacksonized
 	public static class Qna {
 		@NotBlank
-		private String question;
+		@JsonProperty("question")
+		private final String question;
+
 
 		@NotBlank
-		private String answer;
+		@JsonProperty("answer")
+		private final String answer;
 	}
 }
