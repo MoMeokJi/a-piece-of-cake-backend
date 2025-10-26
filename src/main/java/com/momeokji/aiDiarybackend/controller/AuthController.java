@@ -4,6 +4,8 @@ import com.momeokji.aiDiarybackend.dto.request.MemberSignupRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.TokenResponseDto;
 import com.momeokji.aiDiarybackend.service.AuthService;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -14,19 +16,27 @@ public class AuthController {
 
 	private final AuthService authService;
 
-	// 토큰 발급(가입/로그인 같이 쓸 듯)
+	//회원가입, 로그인
 	@PostMapping("/users")
-	public ResponseEntity<TokenResponseDto> issue(@Validated @RequestBody MemberSignupRequestDto req) {
-		return ResponseEntity.ok(authService.issueTokens(req));
+	public ResponseEntity<Void> issue(@Validated @RequestBody MemberSignupRequestDto req) {
+		TokenResponseDto tokens = authService.issueTokens(req);
+		return ResponseEntity.noContent()
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.getAccessToken())
+			.header("Refresh-Token", tokens.getRefreshToken())
+			.build();
 	}
 
-	// 리프레시
+	// 토큰 리프레시
 	@PostMapping("/auth/refresh")
-	public ResponseEntity<TokenResponseDto> refresh(@RequestParam String refreshToken) {
-		return ResponseEntity.ok(authService.refresh(refreshToken));
+	public ResponseEntity<Void> refresh(@RequestHeader("Refresh-Token") String refreshToken) {
+		TokenResponseDto tokens = authService.refresh(refreshToken);
+		return ResponseEntity.noContent()
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.getAccessToken())
+			.header("Refresh-Token", tokens.getRefreshToken())
+			.build();
 	}
 
-	//userId체크
+	//userId 확인용
 	@GetMapping("/me")
 	public ResponseEntity<String> me(org.springframework.security.core.Authentication auth) {
 		return ResponseEntity.ok(auth.getName()); // JwtAuthFilter에서 principal=userId
