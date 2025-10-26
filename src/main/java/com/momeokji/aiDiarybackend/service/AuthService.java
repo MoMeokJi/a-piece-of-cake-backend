@@ -21,7 +21,6 @@ public class AuthService {
 
 	@Transactional
 	public TokenResponseDto issueTokens(MemberSignupRequestDto req) {
-		// deviceId(=FCM)로 upsert
 		Member member = memberRepository.findByDeviceId(req.getDeviceId())
 			.orElseGet(() -> memberRepository.save(
 				Member.builder()
@@ -41,14 +40,16 @@ public class AuthService {
 	public TokenResponseDto refresh(String refreshToken) {
 		var jws = jwt.parse(refreshToken);
 		var claims = jws.getPayload();
-		if (!"REFRESH".equals(claims.get("typ"))) throw new IllegalArgumentException("invalid refresh");
+		if (!"REFRESH".equals(claims.get("typ"))){
+			throw new IllegalArgumentException("refresh가 유효하지 않습니다.");
+		}
 
 		String userId = claims.getSubject();
 		Member member = memberRepository.findById(userId).orElseThrow();
 
 		return TokenResponseDto.builder()
 			.accessToken(jwt.generateAccessToken(member))
-			.refreshToken(jwt.generateRefreshToken(member)) // rotation
+			.refreshToken(jwt.generateRefreshToken(member))
 			.build();
 	}
 }
