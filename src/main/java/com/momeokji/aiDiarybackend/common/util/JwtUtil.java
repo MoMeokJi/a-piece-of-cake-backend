@@ -46,7 +46,7 @@ public class JwtUtil {
 		return Jwts.builder()
 			.issuer(issuer)
 			.subject(member.getMemberId()) // sub = memberId
-			.claims(Map.of("did", member.getDeviceId(), "typ", typ)) // did = deviceId
+			.claims(Map.of("did", member.getDeviceId(), "typ", typ))
 			.issuedAt(new Date(now))
 			.expiration(new Date(now + expMs))
 			.signWith(key(), Jwts.SIG.HS256)
@@ -56,9 +56,9 @@ public class JwtUtil {
 	public Jws<Claims> parse(String token) {
 		return Jwts.parser()
 			.requireIssuer(issuer)
-			.verifyWith(key())                 // SecretKey
+			.verifyWith(key())
 			.build()
-			.parseSignedClaims(token);         // Jws<Claims> 반환
+			.parseSignedClaims(token);
 	}
 
 	public static String resolveBearer(String header) {
