@@ -18,7 +18,7 @@ import com.momeokji.aiDiarybackend.service.QuestionService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/diaries")
+@RequestMapping("/diaries")
 @RequiredArgsConstructor
 public class DiaryController {
 
