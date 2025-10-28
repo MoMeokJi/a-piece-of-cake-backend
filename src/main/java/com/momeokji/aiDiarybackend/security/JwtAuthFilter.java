@@ -12,6 +12,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +25,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -37,7 +40,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
-		if ("OPTIONS".equalsIgnoreCase(request.getMethod())) return true;
+		String method = request.getMethod();
+		String uri = request.getRequestURI();
+		//에러 로그 체크
+		log.info("[AUTH] shouldNotFilter? method={} uri={}", method, uri);
+		if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+			return true;
+		}
 		return WHITELIST.contains(request.getServletPath());
 	}
 
