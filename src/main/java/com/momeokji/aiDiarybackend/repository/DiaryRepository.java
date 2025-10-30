@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import com.momeokji.aiDiarybackend.entity.Diary;
 
 @Repository
-public interface DiaryRepository extends JpaRepository<Diary,String> {
+public interface DiaryRepository extends JpaRepository<Diary,Long> {
 
 
 }
