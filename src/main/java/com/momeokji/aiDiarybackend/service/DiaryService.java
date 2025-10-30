@@ -1,14 +1,18 @@
 package com.momeokji.aiDiarybackend.service;
 
-import com.momeokji.aiDiarybackend.dto.openai.OpenAiRequestDto;
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
+import com.momeokji.aiDiarybackend.dto.request.DiaryConfirmRequestDto;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
+import com.momeokji.aiDiarybackend.entity.Diary;
+import com.momeokji.aiDiarybackend.entity.DiaryColor;
+import com.momeokji.aiDiarybackend.entity.Member;
+import com.momeokji.aiDiarybackend.repository.DiaryColorRepository;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,63 +27,85 @@ import java.util.Map;
 public class DiaryService {
 
 	private final DiaryRepository diaryRepository;
+	private final DiaryColorRepository diaryColorRepository;
 	private final MemberRepository memberRepository;
 	private final RedisService redisService;
 	private final OpenAiService openAiService;
+	private final DiarySummaryService diarySummaryService;
+	private final DiaryColorService diaryColorService;
 
-	@Value("${openai.prompt.id}")
-	private String promptId;
-
-	@Value("${openai.prompt.version}")
-	private String promptVersion;
 
 	@Transactional(readOnly = true)
 	public DiaryGenerateResponseDto generate(Authentication auth, DiaryGenerateRequestDto req) {
 		final String userId = auth.getName();
-		log.info("[DRY-RUN] generate diary for userId={}", userId);
+		log.info("일기생성, userId={}", userId);
 
-		// 1) Redis에서 reference_sets 조회
+		// Redis에서 reference_sets 조회
 		List<ReferenceSet> refsets = redisService.getAllRefSets(userId);
 
-		// 2) OpenAI input용 Map 구성 (object -> JSON string으로 변환)
+		// OpenAI input용 Map 구성 (object -> JSON string으로 변환)
 		Map<String, Object> input = new HashMap<>();
 		input.put("reference_sets", refsets);
 		input.put("target_set", req.getTargetSet());
 
-		// 3) prompt 구성
-		OpenAiRequestDto.Prompt prompt = OpenAiRequestDto.Prompt.builder()
-			.id(promptId)             // pmpt_xxx
-			.version(promptVersion)   // "7"
-			.build();
+		// Open Ai 호출
+		String content = openAiService.call("content", input);
 
-		// 4) OpenAI 호출
-		String content = openAiService.call(prompt, input);
+		// qna저장 (일기 내용은 빈 본문)
+		redisService.pushQna(userId, req.getTargetSet());
 
-        /* =======================
-           아래는 나중에 활성화 예정 (현재는 주석)
-        ========================== */
-
-		// // 4) DB 저장 (content만)
-		// Member member = memberRepository.findById(userId).orElseThrow();
-		// Diary diary = diaryRepository.save(
-		//     Diary.builder()
-		//         .userId(member.getMemberId())
-		//         .content(content)
-		//         .build()
-		// );
-		// log.info("Saved diary: id={}, userId={}", diary.getDiaryId(), diary.getUserId());
-
-		// // 5) Redis 회전 저장(최신4 + 이번 생성1 → 5 유지)
-		// ReferenceSet newRef = ReferenceSet.builder()
-		//     .qna(req.getTargetSet())
-		//     .diary(content)
-		//     .createdAt(Instant.now().toEpochMilli())
-		//     .build();
-		// redisService.pushAndTrim(userId, newRef);
-
-		// 4) 응답 반환 (AI 본문만)
+		// 응답 반환
 		return DiaryGenerateResponseDto.builder()
 			.content(content)
+			.build();
+	}
+
+	@Transactional
+	public DiaryConfirmResponseDto confirm(Authentication auth, DiaryConfirmRequestDto req) {
+		final String userId = auth.getName();
+
+		//요약/색상
+		String summaryDate   = openAiService.call("summary", Map.of("text", req.getText()));
+		String colorsList = openAiService.call("colors",  Map.of("text", req.getText()));
+
+
+		List<String> colors = diaryColorService.parseHexColors(colorsList);
+		String summary = diarySummaryService.parseSummary(summaryDate);
+
+		//Diary 저장
+		Member member = memberRepository.findById(userId).orElseThrow();
+		Diary diary = diaryRepository.save(
+			Diary.builder()
+				.userId(member.getMemberId())
+				.content(req.getText())
+				.summary(summary)
+				.build()
+		);
+
+		// 색상 저장 (아이디 0과1로 2개)
+		for (int i = 0; i < Math.min(2, colors.size()); i++) {
+			diaryColorRepository.save(
+				DiaryColor.builder()
+					.diaryId(diary.getDiaryId())
+					.colorId(i)
+					.colorName(colors.get(i))
+					.build()
+			);
+		}
+
+		//음악 저장 추가해야함
+
+		// Redis 갱신
+		redisService.finalizeLatestDiary(userId, req.getText());
+
+		// 응답 구성
+		return DiaryConfirmResponseDto.builder()
+			.diaryId(diary.getDiaryId())
+			.content(diary.getContent())
+			.createdAt(diary.getCreatedAt())
+			.summary(summary)
+			.images(req.getImages()) // 추후 채워야함.
+			.recommandColors(colors)
 			.build();
 	}
 }
