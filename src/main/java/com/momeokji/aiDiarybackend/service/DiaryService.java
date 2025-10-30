@@ -1,7 +1,5 @@
 package com.momeokji.aiDiarybackend.service;
 
-import static com.momeokji.aiDiarybackend.service.DiaryColorService.*;
-;
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
 import com.momeokji.aiDiarybackend.dto.request.DiaryConfirmRequestDto;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
@@ -33,6 +31,8 @@ public class DiaryService {
 	private final MemberRepository memberRepository;
 	private final RedisService redisService;
 	private final OpenAiService openAiService;
+	private final DiarySummaryService diarySummaryService;
+	private final DiaryColorService diaryColorService;
 
 
 	@Transactional(readOnly = true)
@@ -65,11 +65,12 @@ public class DiaryService {
 		final String userId = auth.getName();
 
 		//요약/색상
-		String summary   = openAiService.call("summary", Map.of("text", req.getText()));
+		String summaryDate   = openAiService.call("summary", Map.of("text", req.getText()));
 		String colorsList = openAiService.call("colors",  Map.of("text", req.getText()));
 
 
-		List<String> colors = parseHexColors(colorsList);
+		List<String> colors = diaryColorService.parseHexColors(colorsList);
+		String summary = diarySummaryService.parseSummary(summaryDate);
 
 		//Diary 저장
 		Member member = memberRepository.findById(userId).orElseThrow();

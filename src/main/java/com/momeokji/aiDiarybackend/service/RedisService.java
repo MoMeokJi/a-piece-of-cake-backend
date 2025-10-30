@@ -92,4 +92,19 @@ public class RedisService {
 		}
 	}
 
+	public void seedDefaultsIfEmpty(String userId, List<String> seedJsonItems) {
+		String k = key(userId);
+		Long size = redis.opsForList().size(k);
+		if (size != null && size > 0) {
+			return; // 이미 refSet이 존재하면 스킵하도록
+		}
+
+		if (seedJsonItems == null || seedJsonItems.isEmpty()) return;
+
+		// 파일의 배열 순서를 그대로 유지
+		redis.opsForList().rightPushAll(k, seedJsonItems);
+		// MAX_LIST 제한
+		redis.opsForList().trim(k, 0, MAX_LIST - 1);
+	}
+
 }
