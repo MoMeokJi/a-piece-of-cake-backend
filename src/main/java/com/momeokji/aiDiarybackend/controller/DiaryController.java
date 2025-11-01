@@ -9,8 +9,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.Authentication;
 
+import com.momeokji.aiDiarybackend.dto.request.DiaryConfirmRequestDto;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.DailyQuestionsResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.service.DiaryService;
 import com.momeokji.aiDiarybackend.service.QuestionService;
@@ -18,7 +20,7 @@ import com.momeokji.aiDiarybackend.service.QuestionService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/diaries")
+@RequestMapping("/diaries")
 @RequiredArgsConstructor
 public class DiaryController {
 
@@ -33,6 +35,15 @@ public class DiaryController {
 	@GetMapping("/question")
 	public ResponseEntity<DailyQuestionsResponseDto> getDailyQuestions() {
 		return ResponseEntity.ok(questionService.getQuestion());
+	}
+
+	@PostMapping
+	public ResponseEntity<DiaryConfirmResponseDto> confirm(
+		Authentication auth,
+		@Validated @RequestBody DiaryConfirmRequestDto req) {
+
+		DiaryConfirmResponseDto response = diaryService.confirm(auth, req);
+		return ResponseEntity.ok(response);
 	}
 
 }

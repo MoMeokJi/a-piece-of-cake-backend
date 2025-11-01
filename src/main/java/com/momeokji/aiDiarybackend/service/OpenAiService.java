@@ -1,11 +1,12 @@
 package com.momeokji.aiDiarybackend.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.momeokji.aiDiarybackend.config.OpenAiConfig;
 import com.momeokji.aiDiarybackend.dto.openai.OpenAiRequestDto;
 import com.momeokji.aiDiarybackend.dto.openai.OpenAiResponseDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,28 +18,33 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class OpenAiService {
 
-	@Value("${openai.api-url}")
-	private String apiUrl;
-
-	@Value("${openai.secret-key}")
-	private String apiKey;
-
+	private final OpenAiConfig aiConfig;
 	private final ObjectMapper objectMapper = new ObjectMapper();
 
-	public String call(OpenAiRequestDto.Prompt prompt, Object inputObj) {
+	public String call(String promptKey, Object inputObj) {
 		try {
+			OpenAiConfig.Prompt prompt = aiConfig.getPrompts().get(promptKey);
+			if (prompt == null) {
+				throw new IllegalArgumentException("설정되지 않은 prompt key입니다.");
+			}
+
 			String inputJson = objectMapper.writeValueAsString(inputObj);
 
 			OpenAiRequestDto body = OpenAiRequestDto.builder()
-				.prompt(prompt)
+				.prompt(OpenAiRequestDto.Prompt.builder()
+					.id(prompt.getId())
+					.version(prompt.getVersion())
+					.build())
 				.input(inputJson)
 				.build();
 
-			WebClient client = WebClient.builder()
-				.baseUrl(apiUrl)
-				.defaultHeader("Authorization", "Bearer " + apiKey)
-				.defaultHeader("OpenAI-Beta", "responses-2024-10-22")
-				.build();
+			WebClient.Builder builder = WebClient.builder()
+				.baseUrl(aiConfig.getApiUrl())
+				.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + aiConfig.getSecretKey());
+			if (aiConfig.getBeta() != null && !aiConfig.getBeta().isBlank()) {
+				builder.defaultHeader("OpenAI-Beta", aiConfig.getBeta());
+			}
+			WebClient client = builder.build();
 
 			OpenAiResponseDto res = client.post()
 				.contentType(MediaType.APPLICATION_JSON)
@@ -64,7 +70,6 @@ public class OpenAiService {
 					.orElseThrow(() -> new RuntimeException("응답 결과가 없습니다."));
 			}
 			throw new RuntimeException("output text가 없습니다.");
-
 		} catch (WebClientResponseException e) {
 			log.error("OpenAI error. status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
 			throw e;
