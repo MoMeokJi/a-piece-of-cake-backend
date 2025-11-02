@@ -16,16 +16,6 @@ public class MusicService {
 
     private final MusicRepository musicRepository;
 
-    public void saveMusic(String title, String artist, String videoId, String mood){ //음악 DB 저장
-        Music music= new Music();
-        music.setTitle(title);
-        music.setArtist(artist);
-        music.setVideoId(videoId);
-        music.setMood(mood);
-        music.setVideoId(videoId);
-        musicRepository.save(music);
-    }
-
     public MusicResponseDto getRandomMusic(String mood){ // Mood에 따른 음악 랜덤으로 가져오기
         List<Music> list = musicRepository.findByMood(mood);
         Music random = list.get(new Random().nextInt(list.size()));
