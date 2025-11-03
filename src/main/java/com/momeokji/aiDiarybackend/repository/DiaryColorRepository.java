@@ -9,4 +9,6 @@ import com.momeokji.aiDiarybackend.entity.DiaryColorId;
 
 public interface DiaryColorRepository extends JpaRepository<DiaryColor, DiaryColorId> {
 	List<DiaryColor> findByDiaryIdOrderByColorIdAsc(Long diaryId);
+
+	List<DiaryColor> findByDiaryIdInOrderByDiaryIdAscColorIdAsc(List<Long> diaryIds);
 }
