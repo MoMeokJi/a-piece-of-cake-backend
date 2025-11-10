@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,5 +41,11 @@ public class AuthController {
 	@GetMapping("/me")
 	public ResponseEntity<String> me(org.springframework.security.core.Authentication auth) {
 		return ResponseEntity.ok(auth.getName()); // JwtAuthFilter에서 principal=userId
+	}
+
+	@DeleteMapping
+	public ResponseEntity<Void> withdraw(Authentication auth) {
+		authService.withdraw(auth);
+		return ResponseEntity.noContent().build();
 	}
 }
