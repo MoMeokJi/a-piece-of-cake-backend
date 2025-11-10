@@ -12,7 +12,7 @@ public class DiaryListResponseDto {
 	private String summary;
 	private LocalDateTime createdAt;
 	private List<String> colors;
-	private MusicDto music;           //일단은 빈거
+	private MusicDto music;
 
 	@Getter @Builder
 	public static class MusicDto {

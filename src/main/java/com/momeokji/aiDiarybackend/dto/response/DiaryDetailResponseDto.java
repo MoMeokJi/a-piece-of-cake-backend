@@ -16,7 +16,7 @@ public class DiaryDetailResponseDto {
 	private List<String> images;   // 일단 null
 	private List<String> colors;   // HEX 코드
 
-	private MusicDto music;        // 아직 미구현이니까 null
+	private MusicDto music;
 	private String feedbackMsg;    // 엔티티에 없으면 null
 
 	@Getter @Builder

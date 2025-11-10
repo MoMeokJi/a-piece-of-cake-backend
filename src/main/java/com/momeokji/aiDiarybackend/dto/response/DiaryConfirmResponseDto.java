@@ -15,5 +15,12 @@ public class DiaryConfirmResponseDto {
 	private final String summary;
 	private final List<String> images;
 	private final List<String> recommandColors;
-	//음악 추가해야 함
+	private final MusicDto music;
+
+	@Getter @Builder
+	public static class MusicDto {
+		private final String title;
+		private final String artist;
+		private final String videoId;
+	}
 }
