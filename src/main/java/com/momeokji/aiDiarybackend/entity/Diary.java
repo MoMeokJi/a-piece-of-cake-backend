@@ -2,7 +2,9 @@ package com.momeokji.aiDiarybackend.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.DynamicInsert;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,6 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Entity
+@DynamicInsert
 @Table(name = "diary",
 	indexes = {
 	@Index(name = "idx_diary_user", columnList = "user_id"), @Index(name = "idx_diary_created", columnList = "created_at")
@@ -39,7 +42,14 @@ public class Diary {
 	@Column(name = "feedback_msg", columnDefinition = "TEXT")
 	private String feedbackMsg;
 
-	@Column(name = "recommand_music", length = 255)
-	private String recommandMusic;
+	@Column(name = "recommand_music")
+	private Long recommandMusic;
+
+	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 1")
+	@ColumnDefault("1")
+	private Boolean isValid;
+
+	@Column(name = "deleted_at")
+	private LocalDateTime deletedAt;
 
 }
