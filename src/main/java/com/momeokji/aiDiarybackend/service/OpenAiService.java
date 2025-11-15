@@ -23,7 +23,7 @@ public class OpenAiService {
 
 	public String call(String promptKey, Object inputObj) {
 		try {
-			OpenAiConfig.Prompt prompt = aiConfig.getPrompts().get(promptKey);
+			OpenAiConfig.Prompt prompt = aiConfig.prompts().get(promptKey);
 			if (prompt == null) {
 				throw new IllegalArgumentException("설정되지 않은 prompt key입니다.");
 			}
@@ -32,17 +32,17 @@ public class OpenAiService {
 
 			OpenAiRequestDto body = OpenAiRequestDto.builder()
 				.prompt(OpenAiRequestDto.Prompt.builder()
-					.id(prompt.getId())
-					.version(prompt.getVersion())
+					.id(prompt.id())
+					.version(prompt.version())
 					.build())
 				.input(inputJson)
 				.build();
 
 			WebClient.Builder builder = WebClient.builder()
-				.baseUrl(aiConfig.getApiUrl())
-				.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + aiConfig.getSecretKey());
-			if (aiConfig.getBeta() != null && !aiConfig.getBeta().isBlank()) {
-				builder.defaultHeader("OpenAI-Beta", aiConfig.getBeta());
+				.baseUrl(aiConfig.apiUrl())
+				.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + aiConfig.secretKey());
+			if (aiConfig.beta() != null && !aiConfig.beta().isBlank()) {
+				builder.defaultHeader("OpenAI-Beta", aiConfig.beta());
 			}
 			WebClient client = builder.build();
 
