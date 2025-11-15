@@ -51,6 +51,13 @@ dependencies {
     implementation 'com.google.apis:google-api-services-youtube:v3-rev222-1.25.0'
     implementation 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
 
+
+	//image
+	implementation platform("software.amazon.awssdk:bom:2.25.40")
+	implementation "software.amazon.awssdk:s3"
+
+	// 이미지 리사이즈/압축
+	implementation "net.coobird:thumbnailator:0.4.20"
 }
 
 tasks.named('test') {
