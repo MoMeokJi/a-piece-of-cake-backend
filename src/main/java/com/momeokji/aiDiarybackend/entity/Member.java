@@ -41,12 +41,20 @@ public class Member {
 	@ColumnDefault("1")
 	private Boolean isValid;
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
+    public void updateFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
+    }
+
 	@Builder
-	public Member(String deviceId, String mobileOS, String preference, String memberId) {
+	public Member(String deviceId, String mobileOS, String preference, String memberId, String fcmToken) {
 		this.deviceId = deviceId;
 		this.mobileOS = mobileOS;
 		this.preference = preference;
 		this.memberId = memberId;
+        this.fcmToken = fcmToken;
 	}
 
 }
