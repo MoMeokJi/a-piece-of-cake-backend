@@ -9,6 +9,7 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryListResponseDto;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.DiaryColor;
+import com.momeokji.aiDiarybackend.entity.DiaryImage;
 import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.entity.Music;
 import com.momeokji.aiDiarybackend.repository.DiaryColorRepository;
@@ -28,11 +29,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -54,7 +57,7 @@ public class DiaryService {
 	private final MusicRepository musicRepository;
 	private final MusicService musicService;
 	private final DiaryImageRepository diaryImageRepository;
-
+	private final DiaryImageService diaryImageService;
 
 	@Transactional(readOnly = true)
 	public DiaryGenerateResponseDto generate(Authentication auth, DiaryGenerateRequestDto req) {
@@ -82,33 +85,32 @@ public class DiaryService {
 	}
 
 	@Transactional
-	public DiaryConfirmResponseDto confirm(Authentication auth, DiaryConfirmRequestDto req) {
+	public DiaryConfirmResponseDto confirm(Authentication auth, String text, List<MultipartFile> imageFiles) {
 		final String userId = auth.getName();
 
-		//요약
-		String summaryDate   = openAiService.call("summary", Map.of("text", req.getText()));
-		String colorsList = openAiService.call("colors",  Map.of("text", req.getText()));
+		// 일기 요약 ,색상 생성
+		String summaryJson = openAiService.call("summary", Map.of("text", text));
+		String colorsJson  = openAiService.call("colors",  Map.of("text", text));
 
-		//색상
-		List<String> colors = diaryColorService.parseHexColors(colorsList);
-		String summary = diarySummaryService.parseSummary(summaryDate);
+		String summary = diarySummaryService.parseSummary(summaryJson);
+		List<String> colors = diaryColorService.parseHexColors(colorsJson);
 
-		//음악
-		Music pickMusic = musicService.pickRandomMusicByDiaryText(req.getText());
-		Long musicId = (pickMusic != null ? pickMusic.getId() : null);
+		// 음악 추천
+		Music picked = musicService.pickRandomMusicByDiaryText(text);
+		Long musicId = (picked != null ? picked.getId() : null);
 
-		//Diary 저장
+		// 일기 파일 저장
 		Member member = memberRepository.findById(userId).orElseThrow();
 		Diary diary = diaryRepository.save(
 			Diary.builder()
 				.userId(member.getMemberId())
-				.content(req.getText())
+				.content(text)
 				.summary(summary)
 				.recommandMusic(musicId)
 				.build()
 		);
 
-		// 색상 저장 (아이디 0과1로 2개)
+		// 색상 저장
 		for (int i = 0; i < Math.min(2, colors.size()); i++) {
 			diaryColorRepository.save(
 				DiaryColor.builder()
@@ -119,26 +121,43 @@ public class DiaryService {
 			);
 		}
 
-		// Redis 갱신
-		redisService.finalizeLatestDiary(userId, req.getText());
+		// s3에 이미지 저장 후 s3 url db에 저장
+		List<String> imageUrls = new ArrayList<>();
+		int idx = 0;
+		for (MultipartFile file : imageFiles) {
+			if (file == null || file.isEmpty()) continue;
+			String url = diaryImageService.compressAndUpload(userId, diary.getDiaryId(), file);
+			imageUrls.add(url);
 
-		//음악 data(default는 null)
+			diaryImageRepository.save(
+				DiaryImage.builder()
+					.diaryId(diary.getDiaryId())
+					.imageId(idx++)
+					.imageUrl(url)
+					.build()
+			);
+		}
+
+		// redis갱신
+		redisService.finalizeLatestDiary(userId, text);
+
+		// 음악 dto생성
 		DiaryConfirmResponseDto.MusicDto musicDto = null;
-		if (pickMusic != null) {
+		if (picked != null) {
 			musicDto = DiaryConfirmResponseDto.MusicDto.builder()
-				.title(pickMusic.getTitle())
-				.artist(pickMusic.getArtist())
-				.videoId(pickMusic.getVideoId())
+				.title(picked.getTitle())
+				.artist(picked.getArtist())
+				.videoId(picked.getVideoId())
 				.build();
 		}
 
-		// 응답 구성
+		// 응답 반환
 		return DiaryConfirmResponseDto.builder()
 			.diaryId(diary.getDiaryId())
 			.content(diary.getContent())
 			.createdAt(diary.getCreatedAt())
 			.summary(summary)
-			.images(req.getImages()) // 추후 채워야함.
+			.images(imageUrls)
 			.recommandColors(colors)
 			.music(musicDto)
 			.build();
