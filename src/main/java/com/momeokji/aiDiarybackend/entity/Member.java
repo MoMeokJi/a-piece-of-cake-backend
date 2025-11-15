@@ -1,5 +1,10 @@
 package com.momeokji.aiDiarybackend.entity;
 
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.DynamicInsert;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -12,6 +17,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
+@DynamicInsert
 @Table(name = "member")
 public class Member {
 
@@ -25,16 +31,22 @@ public class Member {
 	@Column(name ="preference")
 	private String preference;
 
-	@Column(name = "os_type")
-	private String osType;
+	@Column(name = "mobile_os")
+	private String mobileOS;
+
+	@Column(name = "deleted_at")
+	private LocalDateTime deletedAt;
+
+	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 1")
+	@ColumnDefault("1")
+	private Boolean isValid;
 
 	@Builder
-	public Member(String deviceId, String osType, String preference, String memberId) {
+	public Member(String deviceId, String mobileOS, String preference, String memberId) {
 		this.deviceId = deviceId;
-		this.osType = osType;
+		this.mobileOS = mobileOS;
 		this.preference = preference;
 		this.memberId = memberId;
 	}
-
 
 }

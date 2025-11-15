@@ -11,7 +11,7 @@ public class MemberSignupRequestDto {
 	private String deviceId;  // FCM 토큰
 
 	@NotNull(message = "mobileOS는 필수입니다.")
-	private String osType;    // "AND"/"IOS"
+	private String mobileOS;    // "AND"/"IOS"
 
 	@NotNull(message = "preference는 필수입니다.")
 	private String preference;

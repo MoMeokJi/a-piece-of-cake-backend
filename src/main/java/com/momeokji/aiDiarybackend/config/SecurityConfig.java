@@ -40,7 +40,9 @@ public class SecurityConfig {
 		// 개발용: 패턴 허용(요청 Origin을 그대로 에코, credentials 가능)
 		cfg.setAllowedOriginPatterns(List.of(
 			"http://localhost:*",
-			"http://127.0.0.1:*"
+			"http://127.0.0.1:*",
+			"http://192.168.*.*:*",
+			"https://*.ngrok-free.dev"
 			// 운영은 예: "https://app.mydomain.com"
 		));
 		cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
