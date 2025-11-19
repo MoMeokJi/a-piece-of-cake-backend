@@ -78,6 +78,31 @@ public class DiaryController {
 		return ResponseEntity.created(location).body(res); // 201 + Location + 본문
 	}
 
+	@PostMapping(value = "/free", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<DiaryConfirmResponseDto> confirmFree(
+		Authentication auth,
+		@RequestPart("text") String text,
+		@RequestPart("images") List<MultipartFile> images
+	) {
+		if (!StringUtils.hasText(text)) {
+			throw new IllegalArgumentException("text는 필수입니다.");
+		}
+		if (images == null || images.isEmpty()) {
+			throw new IllegalArgumentException("이미지 파일은 1개 이상이어야 합니다.");
+		}
+
+		DiaryConfirmResponseDto res = diaryService.confirmFree(auth, text, images);
+
+		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+			.path("/{id}")
+			.buildAndExpand(res.getDiaryId())
+			.toUri();
+
+		return ResponseEntity.created(location).body(res);
+	}
+
+
+
 	@GetMapping
 	public List<DiaryListResponseDto> list(
 		Authentication auth,

@@ -89,6 +89,19 @@ public class AuthService {
 			diaryRepository.softDeleteAllOfUser(userId, now);
 		}
 		memberRepository.softDeleteOne(userId, now);
-
 	}
+
+	@Transactional
+	public TokenResponseDto loginByDeviceId(String deviceId) {
+		Member member = memberRepository.findByDeviceId(deviceId)
+			.orElseThrow(() -> new IllegalArgumentException("DeviceId가 유효하지 않습니다."));
+
+		return TokenResponseDto.builder()
+			.accessToken(jwt.generateAccessToken(member))
+			.refreshToken(jwt.generateRefreshToken(member))
+			.build();
+	}
+
+
+
 }

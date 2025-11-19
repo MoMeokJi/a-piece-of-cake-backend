@@ -35,7 +35,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 	private static final Set<String> WHITELIST = Set.of(
 		"/users",
-		"/auth/refresh"
+		"/auth/refresh",
+		"/auth/login"
 	);
 
 	@Override
