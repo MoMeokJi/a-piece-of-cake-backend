@@ -84,8 +84,21 @@ public class DiaryService {
 			.build();
 	}
 
+
+	//질문 일기
 	@Transactional
 	public DiaryConfirmResponseDto confirm(Authentication auth, String text, List<MultipartFile> imageFiles) {
+		return doConfirm(auth, text, imageFiles, true);
+	}
+
+	//자유 일기
+	@Transactional
+	public DiaryConfirmResponseDto confirmFree(Authentication auth, String text, List<MultipartFile> imageFiles) {
+		return doConfirm(auth, text, imageFiles, false);
+	}
+
+
+	private DiaryConfirmResponseDto doConfirm(Authentication auth, String text, List<MultipartFile> imageFiles,boolean updateRedis) {
 		final String userId = auth.getName();
 
 		// 일기 요약 ,색상 생성
@@ -138,8 +151,10 @@ public class DiaryService {
 			);
 		}
 
-		// redis갱신
-		redisService.finalizeLatestDiary(userId, text);
+		//자유일기에서는 redis갱신 x
+		if (updateRedis) {
+			redisService.finalizeLatestDiary(userId, text);
+		}
 
 		// 음악 dto생성
 		DiaryConfirmResponseDto.MusicDto musicDto = null;
