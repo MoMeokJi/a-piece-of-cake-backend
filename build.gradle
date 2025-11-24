@@ -58,6 +58,9 @@ dependencies {
 
 	// 이미지 리사이즈/압축
 	implementation "net.coobird:thumbnailator:0.4.20"
+
+	//fcm
+	implementation 'com.google.firebase:firebase-admin:9.7.0'
 }
 
 tasks.named('test') {
