@@ -14,7 +14,7 @@ public class DiaryConfirmResponseDto {
 	private final LocalDateTime createdAt;
 	private final String summary;
 	private final List<String> images;
-	private final List<String> recommandColors;
+	private final List<String> colors;
 	private final MusicDto music;
 
 	@Getter @Builder
