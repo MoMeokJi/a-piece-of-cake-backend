@@ -56,4 +56,6 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
 	List<Diary> findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(
 		LocalDateTime before
 	);
+
+	Optional<Diary> findTop1ByUserIdAndIsValidTrueOrderByCreatedAtDesc(String userId);
 }
