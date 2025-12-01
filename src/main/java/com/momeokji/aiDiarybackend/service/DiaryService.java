@@ -1,7 +1,6 @@
 package com.momeokji.aiDiarybackend.service;
 
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
-import com.momeokji.aiDiarybackend.dto.request.DiaryConfirmRequestDto;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
@@ -173,7 +172,7 @@ public class DiaryService {
 			.createdAt(diary.getCreatedAt())
 			.summary(summary)
 			.images(imageUrls)
-			.recommandColors(colors)
+			.colors(colors)
 			.music(musicDto)
 			.build();
 	}
@@ -319,8 +318,11 @@ public class DiaryService {
 			.map(DiaryColor::getColorName)
 			.toList();
 
-		// TODO: DiaryImage 테이블 연동 시 채우기
-		List<String> images = List.of();
+		List<String> images = diaryImageRepository.findByDiaryIdOrderByImageIdAsc(diary.getDiaryId())
+			.stream()
+			.filter(img -> Boolean.TRUE.equals(img.getIsValid()))
+			.map(DiaryImage::getImageUrl)
+			.toList();
 
 		DiaryDetailResponseDto.MusicDto musicDto = null;
 
@@ -335,7 +337,6 @@ public class DiaryService {
 				.orElse(null);
 		}
 
-		// TODO: diary.getFeedbackMsg() 존재 시 치환
 		String feedback = diary.getFeedbackMsg();
 
 		return DiaryDetailResponseDto.builder()

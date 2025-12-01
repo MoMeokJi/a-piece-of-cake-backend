@@ -52,4 +52,10 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
            and d.isValid = true
     """)
 	List<Long> findAliveIdsByUserId(@Param("userId") String userId);
+
+	List<Diary> findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(
+		LocalDateTime before
+	);
+
+	Optional<Diary> findTop1ByUserIdAndIsValidTrueOrderByCreatedAtDesc(String userId);
 }

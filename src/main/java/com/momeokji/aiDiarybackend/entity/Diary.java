@@ -52,4 +52,9 @@ public class Diary {
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
+	public void updateFeedbackMsg(String feedbackMsg) {
+		this.feedbackMsg = feedbackMsg;
+	}
+
+
 }
