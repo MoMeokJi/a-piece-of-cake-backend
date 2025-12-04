@@ -1,14 +1,12 @@
 package com.momeokji.aiDiarybackend.service;
 
 import com.google.firebase.messaging.AndroidConfig;
-import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
 import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.ApsAlert;
 import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
-import com.google.firebase.messaging.Notification;
 import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
@@ -45,14 +43,9 @@ public class FcmService {
         payload.put("title", title);
         payload.put("body", body);
 
-        Notification notification = Notification.builder()
-            .setTitle(title)
-            .setBody(body)
-            .build();
 
         Message.Builder msgBuilder = Message.builder()
             .setToken(token)
-            .setNotification(notification)
             .putAllData(payload);
 
         String os = member.getMobileOS();
@@ -60,13 +53,7 @@ public class FcmService {
 
         if (os.equals("AND"))
         {
-            AndroidNotification androidNotification = AndroidNotification.builder()
-                .setTitle(title)
-                .setBody(body)
-                .build();
-
             AndroidConfig androidConfig = AndroidConfig.builder()
-                .setNotification(androidNotification)
                 .setPriority(AndroidConfig.Priority.HIGH)
                 .build();
 
@@ -79,6 +66,8 @@ public class FcmService {
                 .putHeader("apns-push-type", "alert")
                 .setAps(Aps.builder()
                     .setContentAvailable(true)      //백 그라운드 처리
+                    .setBadge(0)
+                    .setSound("true")
                     .setAlert(ApsAlert.builder().setTitle(title).setBody(body).build())
                     .build())
                 .build();
