@@ -40,9 +40,8 @@ public class DiaryColor {
 	@Column(name = "color_name", nullable = false, length = 7) // "#AABBCC"
 	private String colorName;
 
-	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 1")
-	@ColumnDefault("1")
-	private Boolean isValid;
+	@Column(name = "is_valid", nullable = false)
+	private Boolean isValid = true;
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
