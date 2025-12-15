@@ -33,4 +33,20 @@ public interface DiaryImageRepository extends JpaRepository<DiaryImage, DiaryIma
     """)
 	int softDeleteByDiaryIdIn(@Param("diaryIds") List<Long> diaryIds,
 		@Param("now") LocalDateTime now);
+
+	@Query("""
+        select i
+          from DiaryImage i
+         where i.isValid = false
+           and i.deletedAt <= :threshold
+    """)
+	List<DiaryImage> findExpiredImages(@Param("threshold") LocalDateTime threshold);
+
+	@Modifying
+	@Query("""
+    delete from DiaryImage i
+    where i.isValid = false
+      and i.deletedAt <= :threshold
+""")
+	int deleteExpired(@Param("threshold") LocalDateTime threshold);
 }

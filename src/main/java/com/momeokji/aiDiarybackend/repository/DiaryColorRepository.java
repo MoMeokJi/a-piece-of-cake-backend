@@ -36,4 +36,11 @@ public interface DiaryColorRepository extends JpaRepository<DiaryColor, DiaryCol
 	int softDeleteByDiaryIdIn(@Param("diaryIds") List<Long> diaryIds,
 		@Param("now") LocalDateTime now);
 
+	@Modifying
+	@Query("""
+    delete from DiaryColor c
+    where c.isValid = false
+      and c.deletedAt <= :threshold
+""")
+	int deleteExpired(@Param("threshold") LocalDateTime threshold);
 }
