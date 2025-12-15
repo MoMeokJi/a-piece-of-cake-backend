@@ -1,0 +1,16 @@
+package com.momeokji.aiDiarybackend.repository;
+
+import com.momeokji.aiDiarybackend.entity.Music;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.Collection;
+import java.util.List;
+
+@Repository
+public interface MusicRepository extends JpaRepository<Music, Long> {
+    List<Music> findByMood(String mood);
+
+    //list, calendar
+    List<Music> findByIdIn(Collection<Long> ids);
+}
