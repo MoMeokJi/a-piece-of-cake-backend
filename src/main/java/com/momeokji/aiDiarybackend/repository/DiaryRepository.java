@@ -58,4 +58,13 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
 	);
 
 	Optional<Diary> findTop1ByUserIdAndIsValidTrueOrderByCreatedAtDesc(String userId);
+
+	@Modifying
+	@Query("""
+        delete from Diary d
+        where d.isValid = false
+          and d.deletedAt <= :threshold
+    """)
+	int deleteExpired(@Param("threshold") LocalDateTime threshold);
+
 }

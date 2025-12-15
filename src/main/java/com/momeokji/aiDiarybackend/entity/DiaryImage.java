@@ -39,9 +39,8 @@ public class DiaryImage {
 	@Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
 	private String imageUrl;
 
-	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 1")
-	@ColumnDefault("1")
-	private Boolean isValid;
+	@Column(name = "is_valid", nullable = false)
+	private Boolean isValid = true;
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;

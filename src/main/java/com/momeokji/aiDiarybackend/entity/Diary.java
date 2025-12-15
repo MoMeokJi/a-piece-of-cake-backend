@@ -45,9 +45,8 @@ public class Diary {
 	@Column(name = "recommand_music")
 	private Long recommandMusic;
 
-	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 1")
-	@ColumnDefault("1")
-	private Boolean isValid;
+	@Column(name = "is_valid", nullable = false)
+	private Boolean isValid = true;
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;

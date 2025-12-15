@@ -20,7 +20,7 @@ public class AuthController {
 
 	//회원가입, 로그인
 	@PostMapping("/users")
-	public ResponseEntity<Void> issue(@Validated @RequestBody MemberSignupRequestDto req) {
+	public ResponseEntity<Void> signup(@Validated @RequestBody MemberSignupRequestDto req) {
 		TokenResponseDto tokens = authService.issueTokens(req);
 		return ResponseEntity.noContent()
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.getAccessToken())
@@ -38,6 +38,7 @@ public class AuthController {
 			.build();
 	}
 
+	//재 로그인(리프레시 토큰 재발급)
 	@PostMapping("/auth/login")
 	public ResponseEntity<Void> login(@Validated @RequestBody MemberLoginRequestDto req) {
 		TokenResponseDto tokens = authService.loginByDeviceId(req.getDeviceId());
