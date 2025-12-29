@@ -60,4 +60,9 @@ public class AuthController {
 		authService.withdraw(auth);
 		return ResponseEntity.noContent().build();
 	}
+
+	@GetMapping("/health")
+	public ResponseEntity<String> helath(){
+		return ResponseEntity.ok("OK");
+	}
 }
