@@ -24,11 +24,11 @@ public class SecurityConfig {
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http.csrf(csrf -> csrf.disable())
-			.cors(cors -> {})
+			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 			.authorizeHttpRequests(auth -> auth
 				.requestMatchers(HttpMethod.POST, "/users").permitAll()
-				.requestMatchers( "/auth/refresh","/auth/login","/error", "/error/**").permitAll()
+				.requestMatchers( "/auth/refresh","/auth/login","/error", "/error/**", "/health").permitAll()
 				.anyRequest().authenticated()
 			)
 			.addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
@@ -44,12 +44,16 @@ public class SecurityConfig {
 			"http://localhost:*",
 			"http://127.0.0.1:*",
 			"http://192.168.*.*:*",
-			"https://*.ngrok-free.dev"
-			// 운영은 예: "https://app.mydomain.com"
+			"https://*.ngrok-free.dev",
+			//운영용
+			"https://piece-of-cake.click",
+			"https://piece-of-cake.click:8080",
+			"http://piece-of-cake.click",
+			"http://piece-of-cake.click:8080"
 		));
 		cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
 		cfg.addAllowedHeader("*");
-		cfg.setExposedHeaders(List.of("Authorization")); // JWT 읽어야 하면
+		cfg.setExposedHeaders(List.of("Authorization","Refresh-Token")); // JWT 읽어야 하면
 		cfg.setAllowCredentials(true);
 		cfg.setMaxAge(3600L);
 
