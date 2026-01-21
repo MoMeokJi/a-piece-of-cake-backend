@@ -9,6 +9,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +28,7 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryListResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.service.DiaryService;
 import com.momeokji.aiDiarybackend.service.QuestionService;
 
@@ -130,6 +132,15 @@ public class DiaryController {
 	public ResponseEntity<Void> delete(@PathVariable Long diaryId, Authentication auth) {
 		diaryService.deleteDiary(auth, diaryId);
 		return ResponseEntity.noContent().build();
+	}
+
+	@PatchMapping("/{diaryId}")
+	public ResponseEntity<DiaryPatchResponseDto> patchDiary(
+		Authentication auth,
+		@PathVariable Long diaryId,
+		@Validated @RequestBody com.momeokji.aiDiarybackend.dto.request.DiaryPatchRequest req){
+		DiaryPatchResponseDto res = diaryService.updateContent(auth, diaryId, req.getText());
+		return ResponseEntity.ok(res);
 	}
 
 }
