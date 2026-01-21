@@ -62,7 +62,7 @@ public class RedisService {
 	}
 
 	//가장 최근 일기에 diary 확정해서 삽입
-	public void finalizeLatestDiary(String userId, String diaryText) {
+	public void finalizeLatestDiary(String userId, Long diaryId, String diaryText) {
 		String k = key(userId);
 
 		//맨 앞 조회
@@ -77,6 +77,7 @@ public class RedisService {
 			}
 
 			ReferenceSet finalized = ReferenceSet.builder()
+				.diaryId(diaryId)
 				.qna(latest.getQna())
 				.diary(diaryText)
 				.createdAt(System.currentTimeMillis())
@@ -107,4 +108,29 @@ public class RedisService {
 		redis.opsForList().trim(k, 0, MAX_LIST - 1);
 	}
 
+	public void updateDiaryContent(String userId, Long diaryId, String newContent) {
+		String k = key(userId);
+		List<String> all = redis.opsForList().range(k, 0, -1);
+		if(all == null||all.isEmpty()){
+			return;
+		}
+
+		for(int i=0; i<all.size(); i++) {
+			try{
+				ReferenceSet rs = om.readValue(all.get(i), new TypeReference<ReferenceSet>() {});
+				if (rs.getDiaryId() != null && rs.getDiaryId().equals(diaryId)) {
+					ReferenceSet updated = ReferenceSet.builder()
+						.diaryId(rs.getDiaryId())
+						.qna(rs.getQna())
+						.diary(newContent)
+						.createdAt(rs.getCreatedAt())
+						.build();
+					String json = om.writeValueAsString(updated);
+					redis.opsForList().set(k, i, json);
+					return;
+				}
+			}catch (Exception ignore) {
+			}
+		}
+	}
 }

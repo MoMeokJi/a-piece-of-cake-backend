@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReferenceSet {
+	private Long diaryId;
 	private List<Qna> qna;
 	private String diary;
 	private long createdAt;
