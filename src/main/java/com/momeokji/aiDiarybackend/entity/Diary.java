@@ -54,6 +54,7 @@ public class Diary {
 	public void updateFeedbackMsg(String feedbackMsg) {
 		this.feedbackMsg = feedbackMsg;
 	}
+	public void updateContent(String content) { this.content = content; }
 
 
 }

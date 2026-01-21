@@ -6,6 +6,7 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryListResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.DiaryColor;
 import com.momeokji.aiDiarybackend.entity.DiaryImage;
@@ -152,7 +153,7 @@ public class DiaryService {
 
 		//자유일기에서는 redis갱신 x
 		if (updateRedis) {
-			redisService.finalizeLatestDiary(userId, text);
+			redisService.finalizeLatestDiary(userId, diary.getDiaryId(), text);
 		}
 
 		// 음악 dto생성
@@ -369,6 +370,29 @@ public class DiaryService {
 		if (updated == 0) {
 			throw new IllegalStateException("이미 삭제되었거나 권한이 없습니다.");
 		}
+	}
+
+
+
+	@Transactional
+	public DiaryPatchResponseDto updateContent(Authentication auth, Long diaryId, String newContent) {
+
+		String userId = auth.getName();
+
+		Diary diary = diaryRepository.findByDiaryIdAndUserIdAndIsValidTrue(diaryId, userId)
+			.orElseThrow(() -> new IllegalArgumentException("일기를 찾을 수 없습니다."));
+
+		diary.updateContent(newContent);
+
+		try {
+			redisService.updateDiaryContent(userId, diaryId, newContent);
+		} catch (Exception e) {
+			log.warn("Redis refSet 갱신 실패 userId={}, diaryId={}", userId, diaryId, e);
+		}
+
+		return DiaryPatchResponseDto.builder()
+			.diaryId(diaryId)
+			.build();
 	}
 
 }
