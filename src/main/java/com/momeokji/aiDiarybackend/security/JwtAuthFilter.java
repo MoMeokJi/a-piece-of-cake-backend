@@ -34,7 +34,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	private final MemberRepository memberRepository;
 
 	private static final Set<String> WHITELIST = Set.of(
-		"/users",
 		"/auth/refresh",
 		"/auth/login",
 		"/health",
@@ -44,11 +43,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
 		String method = request.getMethod();
-		String uri = request.getRequestURI();
 		String path = request.getServletPath();
+
 		//에러 로그 체크
-		log.info("[AUTH] shouldNotFilter? method={} uri={}", method, uri);
-		if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+		log.info("[AUTH] shouldNotFilter? method={} path={}", method, path);
+
+		if ("OPTIONS".equalsIgnoreCase(method)) {
 			return true;
 		}
 
@@ -56,7 +56,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			return true;
 		}
 
-		return WHITELIST.contains(request.getServletPath());
+		if ("/users".equals(path)) {
+			return "POST".equalsIgnoreCase(method);
+		}
+
+		return WHITELIST.contains(path);
 	}
 
 	@Override
