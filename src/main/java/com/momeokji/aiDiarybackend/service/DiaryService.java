@@ -100,12 +100,22 @@ public class DiaryService {
 
 	private DiaryConfirmResponseDto doConfirm(Authentication auth, String text, List<MultipartFile> imageFiles,boolean updateRedis) {
 		final String userId = auth.getName();
+		String summary;
 
-		// 일기 요약 ,색상 생성
-		String summaryJson = openAiService.call("summary", Map.of("text", text));
+		if(text==null){
+			text = "";
+		}
+
+		if(!updateRedis&&text.length()<80){
+			summary = text;
+		}
+		//(text.length()>=80
+		else{
+			String summaryJson = openAiService.call("summary", Map.of("text", text));
+			summary = diarySummaryService.parseSummary(summaryJson);
+		}
+
 		String colorsJson  = openAiService.call("colors",  Map.of("text", text));
-
-		String summary = diarySummaryService.parseSummary(summaryJson);
 		List<String> colors = diaryColorService.parseHexColors(colorsJson);
 
 		// 음악 추천
