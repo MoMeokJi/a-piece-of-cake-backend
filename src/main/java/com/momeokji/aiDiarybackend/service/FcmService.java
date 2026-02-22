@@ -75,16 +75,16 @@ public class FcmService {
 
     public void remindNotification(String memberId)
         throws FirebaseMessagingException {
-        String title = "조각 케이크에서 메시지가 왔어요";
-        String body = "일기를 안쓴지 2일이나 지났어요 지금 바로 쓰러가볼까요?";
+        String title = "오늘 하루는 어땠나요?";
+        String body = "지금 기록하지 않으면 사라질지도 몰라요!";
         Map<String, String> data = Map.of("type", "REMIND");
         sendFcmNotification(memberId, title, body, data);
     }
 
     public void feedbackNotification(String memberId, Long diaryId)
         throws FirebaseMessagingException {
-        String title = "조각 케이크에서 메시지가 왔어요";
-        String body = "공감 알림이 도착했어요 지금 바로 확인해보세요!";
+        String title = "오늘의 시식평이 도착했어요 \uD83C\uDF70";
+        String body = "달콤한 한마디가 기다리고 있어요, 지금 확인해보세요.";
         Map<String, String> data = Map.of("type", "FEEDBACK",
             "diaryId", String.valueOf(diaryId));
         sendFcmNotification(memberId, title, body, data);

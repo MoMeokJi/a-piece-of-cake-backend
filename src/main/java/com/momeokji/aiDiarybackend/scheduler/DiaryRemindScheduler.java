@@ -60,8 +60,8 @@ public class DiaryRemindScheduler {
 
 			long days = ChronoUnit.DAYS.between(lastDate, today);
 
-			// 2일 이상, 14일 이하 인 사람한테만 알림 보냄
-			if (days < 2 || days > 14) {
+			// 1일 이상, 14일 이하 인 사람한테만 알림 보냄
+			if (days < 1 || days > 14) {
 				continue;
 			}
 
