@@ -30,7 +30,7 @@ public class DiarySympathyScheduler {
 	@Scheduled(initialDelay = 300000,fixedDelay = 300000) // 300000 ms = 5분
 	@Transactional
 	public void fillFeedbackMessages() {
-		LocalDateTime threshold = LocalDateTime.now().minusMinutes(10);
+		LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
 
 		List<Diary> diaries = diaryRepository
 			.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(threshold);
