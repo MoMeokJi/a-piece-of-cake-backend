@@ -133,4 +133,10 @@ public class RedisService {
 			}
 		}
 	}
+
+	public void deleteUserData(String userId) {
+		redis.delete(key(userId));
+	}
+
+
 }
