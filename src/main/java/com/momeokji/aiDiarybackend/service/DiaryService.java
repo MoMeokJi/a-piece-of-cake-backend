@@ -106,6 +106,11 @@ public class DiaryService {
 			text = "";
 		}
 
+		//이미지 파일이 null이면 빈 리스트 반환하도록 처리
+		if (imageFiles == null) {
+			imageFiles = List.of();
+		}
+
 		if(!updateRedis&&text.length()<80){
 			summary = text;
 		}
@@ -382,8 +387,6 @@ public class DiaryService {
 		}
 	}
 
-
-
 	@Transactional
 	public DiaryPatchResponseDto updateContent(Authentication auth, Long diaryId, String newContent) {
 
@@ -403,6 +406,11 @@ public class DiaryService {
 		return DiaryPatchResponseDto.builder()
 			.diaryId(diaryId)
 			.build();
+	}
+
+	@Transactional
+	public void updateLastActiveAt(String userId) {
+		memberRepository.changeLastActiveAt(userId, LocalDateTime.now());
 	}
 
 }
