@@ -100,12 +100,27 @@ public class DiaryService {
 
 	private DiaryConfirmResponseDto doConfirm(Authentication auth, String text, List<MultipartFile> imageFiles,boolean updateRedis) {
 		final String userId = auth.getName();
+		String summary;
 
-		// 일기 요약 ,색상 생성
-		String summaryJson = openAiService.call("summary", Map.of("text", text));
+		if(text==null){
+			text = "";
+		}
+
+		//이미지 파일이 null이면 빈 리스트 반환하도록 처리
+		if (imageFiles == null) {
+			imageFiles = List.of();
+		}
+
+		if(!updateRedis&&text.length()<80){
+			summary = text;
+		}
+		//(text.length()>=80
+		else{
+			String summaryJson = openAiService.call("summary", Map.of("text", text));
+			summary = diarySummaryService.parseSummary(summaryJson);
+		}
+
 		String colorsJson  = openAiService.call("colors",  Map.of("text", text));
-
-		String summary = diarySummaryService.parseSummary(summaryJson);
 		List<String> colors = diaryColorService.parseHexColors(colorsJson);
 
 		// 음악 추천
@@ -372,8 +387,6 @@ public class DiaryService {
 		}
 	}
 
-
-
 	@Transactional
 	public DiaryPatchResponseDto updateContent(Authentication auth, Long diaryId, String newContent) {
 
@@ -393,6 +406,11 @@ public class DiaryService {
 		return DiaryPatchResponseDto.builder()
 			.diaryId(diaryId)
 			.build();
+	}
+
+	@Transactional
+	public void updateLastActiveAt(String userId) {
+		memberRepository.changeLastActiveAt(userId, LocalDateTime.now());
 	}
 
 }

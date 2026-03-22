@@ -26,11 +26,11 @@ public class DiarySympathyScheduler {
 	private final OpenAiService openAiService;
 	private final FcmService fcmService;
 
-	//10분 간격으로 공감메시지 생성
-	@Scheduled(initialDelay = 600000,fixedDelay = 600000) // 600000 ms = 10분
+	//5분 간격으로 공감메시지 생성
+	@Scheduled(initialDelay = 300000,fixedDelay = 300000) // 300000 ms = 5분
 	@Transactional
 	public void fillFeedbackMessages() {
-		LocalDateTime threshold = LocalDateTime.now().minusMinutes(10);
+		LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
 
 		List<Diary> diaries = diaryRepository
 			.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(threshold);

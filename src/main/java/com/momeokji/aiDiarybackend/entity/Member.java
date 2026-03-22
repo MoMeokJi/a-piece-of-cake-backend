@@ -41,13 +41,17 @@ public class Member {
 	@ColumnDefault("1")
 	private Boolean isValid;
 
+	@Column(name = "last_active_at")
+	private LocalDateTime lastActiveAt;
+
 
 	@Builder
-	public Member(String deviceId, String mobileOS, String preference, String memberId) {
+	public Member(String deviceId, String mobileOS, String preference, String memberId,LocalDateTime lastActiveAt) {
 		this.deviceId = deviceId;
 		this.mobileOS = mobileOS;
 		this.preference = preference;
 		this.memberId = memberId;
+		this.lastActiveAt = lastActiveAt;
 	}
 
 }
