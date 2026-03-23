@@ -61,13 +61,13 @@ public class DiaryController {
 	public ResponseEntity<DiaryConfirmResponseDto> confirm(
 		Authentication auth,
 		@RequestPart("text") String text,
-		@RequestPart("images") List<MultipartFile> images
+		@RequestPart(value = "images",required = false) List<MultipartFile> images
 	) {
 		if (!StringUtils.hasText(text)) {
 			throw new IllegalArgumentException("text는 필수입니다.");
 		}
-		if (images == null || images.isEmpty()) {
-			throw new IllegalArgumentException("이미지 파일은 1개 이상이어야 합니다.");
+		if (images != null && images.size()>4) {
+			throw new IllegalArgumentException("이미지 파일은 4개 이하여야 합니다.");
 		}
 
 		DiaryConfirmResponseDto res = diaryService.confirm(auth, text, images);
@@ -84,13 +84,13 @@ public class DiaryController {
 	public ResponseEntity<DiaryConfirmResponseDto> confirmFree(
 		Authentication auth,
 		@RequestPart("text") String text,
-		@RequestPart("images") List<MultipartFile> images
+		@RequestPart(value = "images",required = false) List<MultipartFile> images
 	) {
 		if (!StringUtils.hasText(text)) {
 			throw new IllegalArgumentException("text는 필수입니다.");
 		}
-		if (images == null || images.isEmpty()) {
-			throw new IllegalArgumentException("이미지 파일은 1개 이상이어야 합니다.");
+		if (images != null && images.size()>4) {
+			throw new IllegalArgumentException("이미지 파일은 4개 이하여야 합니다.");
 		}
 
 		DiaryConfirmResponseDto res = diaryService.confirmFree(auth, text, images);

@@ -3,6 +3,8 @@ package com.momeokji.aiDiarybackend.security;
 import com.momeokji.aiDiarybackend.common.util.JwtUtil;
 import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
+import com.momeokji.aiDiarybackend.service.DiaryService;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -32,6 +35,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 	private final JwtUtil jwt;
 	private final MemberRepository memberRepository;
+	private final DiaryService diaryService;
 
 	private static final Set<String> WHITELIST = Set.of(
 		"/auth/refresh",
@@ -75,10 +79,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			try {
 				Jws<Claims> ajws = jwt.parse(access);
 				Claims ac = ajws.getPayload();
-				if (!"ACCESS".equals(ac.get("typ"))) throw new JwtException("not access");
+
+				if(!"ACCESS".equals(ac.get("typ"))){
+					throw new JwtException("not access");
+				}
 
 				String userId = ac.getSubject();
+
+				Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
+						.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
+
 				setAuth(userId, req);
+
+				//토큰 검증 하면서 api호출 시간 갱신
+				diaryService.updateLastActiveAt(userId);
 
 				// refresh 유효성 보장: 없거나/무효/만료면 새로 발급해서 내려줌
 				String ensuredRefresh = ensureValidRefresh(userId, refresh);
@@ -102,15 +116,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			try {
 				Jws<Claims> rjws = jwt.parse(refresh);
 				Claims rc = rjws.getPayload();
-				if (!"REFRESH".equals(rc.get("typ"))) throw new JwtException("not refresh");
+
+				if(!"REFRESH".equals(rc.get("typ"))){
+					throw new JwtException("not refresh");
+				}
 
 				String userId = rc.getSubject();
-				Member member = memberRepository.findById(userId).orElseThrow();
+
+				Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
+					.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
 
 				String newAccess  = jwt.generateAccessToken(member);
 				String newRefresh = jwt.generateRefreshToken(member);
 
 				setAuth(userId, req);
+
+				//갱신
+				diaryService.updateLastActiveAt(userId);
 
 				res.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + newAccess);
 				res.setHeader("Refresh-Token", newRefresh);
@@ -137,22 +159,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		if (incomingRefresh == null) {
 			return issueNewRefresh(userId);
 		}
+
 		try {
 			Jws<Claims> rjws = jwt.parse(incomingRefresh);
 			Claims rc = rjws.getPayload();
-			if (!"REFRESH".equals(rc.get("typ"))) return issueNewRefresh(userId);
-			if (!userId.equals(rc.getSubject())) return issueNewRefresh(userId);
+
+			if(!"REFRESH".equals(rc.get("typ"))){
+				return issueNewRefresh(userId);
+			}
+			if(!userId.equals(rc.getSubject())){
+				return issueNewRefresh(userId);
+			}
 			return incomingRefresh; // 유효하므로 그대로 사용
-		} catch (ExpiredJwtException e) {
-			return issueNewRefresh(userId);
-		} catch (JwtException e) {
+
+		}catch(JwtException e){
 			return issueNewRefresh(userId);
 		}
 	}
 
 	private String issueNewRefresh(String userId) {
-		Member m = memberRepository.findById(userId).orElseThrow();
-		return jwt.generateRefreshToken(m);
+		Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
+			.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
+		return jwt.generateRefreshToken(member);
 	}
 
 	private void setAuth(String userId, HttpServletRequest req) {
