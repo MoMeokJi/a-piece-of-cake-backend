@@ -9,6 +9,7 @@ import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.momeokji.aiDiarybackend.entity.Admin;
 import com.momeokji.aiDiarybackend.entity.Member;
 
 import io.jsonwebtoken.*;
@@ -41,12 +42,33 @@ public class JwtUtil {
 		return createToken(member, "REFRESH", refreshExpMs);
 	}
 
+	public String generateAdminAccessToken(Admin admin){
+		return createAdminToken(admin, "ACCESS", accessExpMs);
+	}
+
+	public String generateAdminRefreshToken(Admin admin){
+		return createAdminToken(admin, "REFRESH", refreshExpMs);
+	}
+
 	private String createToken(Member member, String typ, long expMs) {
 		long now = System.currentTimeMillis();
 		return Jwts.builder()
 			.issuer(issuer)
 			.subject(member.getMemberId()) // sub = memberId
 			.claims(Map.of("did", member.getDeviceId(), "typ", typ))
+			.issuedAt(new Date(now))
+			.expiration(new Date(now + expMs))
+			.signWith(key(), Jwts.SIG.HS256)
+			.compact();
+	}
+
+	private String createAdminToken(Admin admin, String typ, long expMs) {
+		long now = System.currentTimeMillis();
+		String role = Boolean.TRUE.equals(admin.getIsSuper()) ? "SUPER_ADMIN" : "ADMIN";
+		return Jwts.builder()
+			.issuer(issuer)
+			.subject(admin.getAdminId()) // sub = adminId
+			.claims(Map.of("typ", typ, "role", role))
 			.issuedAt(new Date(now))
 			.expiration(new Date(now + expMs))
 			.signWith(key(), Jwts.SIG.HS256)
