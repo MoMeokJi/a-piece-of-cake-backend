@@ -28,6 +28,7 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'me.paulschwarz:spring-dotenv:2.5.4'
     implementation 'me.paulschwarz:spring-dotenv:2.5.4'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 
 	//db
 	runtimeOnly   'com.mysql:mysql-connector-j'
