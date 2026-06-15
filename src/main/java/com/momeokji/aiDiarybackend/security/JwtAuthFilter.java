@@ -1,7 +1,9 @@
 package com.momeokji.aiDiarybackend.security;
 
 import com.momeokji.aiDiarybackend.common.util.JwtUtil;
+import com.momeokji.aiDiarybackend.entity.Admin;
 import com.momeokji.aiDiarybackend.entity.Member;
+import com.momeokji.aiDiarybackend.repository.AdminRepository;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
 import com.momeokji.aiDiarybackend.service.DiaryService;
 
@@ -24,7 +26,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -35,6 +36,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 	private final JwtUtil jwt;
 	private final MemberRepository memberRepository;
+	private final AdminRepository adminRepository;
 	private final DiaryService diaryService;
 
 	private static final Set<String> WHITELIST = Set.of(
@@ -64,6 +66,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			return "POST".equalsIgnoreCase(method);
 		}
 
+		if ("/admins".equals(path)) {
+			return "POST".equalsIgnoreCase(method);
+		}
+
+		if ("/admins/login".equals(path)) {
+			return "POST".equalsIgnoreCase(method);
+		}
+
 		return WHITELIST.contains(path);
 	}
 
@@ -85,17 +95,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 				}
 
 				String userId = ac.getSubject();
+				String role = resolveRole(ac);
 
-				Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
+				if (isAdminRole(role)) {
+					adminRepository.findByAdminIdAndIsValidTrue(userId)
+						.orElseThrow(() -> new JwtException("유효하지 않은 관리자입니다."));
+					setAuth(userId, req);
+				} else {
+					memberRepository.findByMemberIdAndIsValidTrue(userId)
 						.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
 
-				setAuth(userId, req);
+					setAuth(userId, req);
 
-				//토큰 검증 하면서 api호출 시간 갱신
-				diaryService.updateLastActiveAt(userId);
+					//토큰 검증 하면서 api호출 시간 갱신
+					diaryService.updateLastActiveAt(userId);
+				}
 
 				// refresh 유효성 보장: 없거나/무효/만료면 새로 발급해서 내려줌
-				String ensuredRefresh = ensureValidRefresh(userId, refresh);
+				String ensuredRefresh = ensureValidRefresh(userId, role, refresh);
 
 				res.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + access);
 				res.setHeader("Refresh-Token", ensuredRefresh);
@@ -122,17 +139,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 				}
 
 				String userId = rc.getSubject();
+				String role = resolveRole(rc);
 
-				Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
-					.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
+				String newAccess;
+				String newRefresh;
 
-				String newAccess  = jwt.generateAccessToken(member);
-				String newRefresh = jwt.generateRefreshToken(member);
+				if (isAdminRole(role)) {
+					Admin admin = adminRepository.findByAdminIdAndIsValidTrue(userId)
+						.orElseThrow(() -> new JwtException("유효하지 않은 관리자입니다."));
+					newAccess = jwt.generateAdminAccessToken(admin);
+					newRefresh = jwt.generateAdminRefreshToken(admin);
+					setAuth(userId, req);
+				} else {
+					Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
+						.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
+					newAccess = jwt.generateAccessToken(member);
+					newRefresh = jwt.generateRefreshToken(member);
 
-				setAuth(userId, req);
+					setAuth(userId, req);
 
-				//갱신
-				diaryService.updateLastActiveAt(userId);
+					//갱신
+					diaryService.updateLastActiveAt(userId);
+				}
 
 				res.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + newAccess);
 				res.setHeader("Refresh-Token", newRefresh);
@@ -155,9 +183,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		);
 	}
 
-	private String ensureValidRefresh(String userId, String incomingRefresh) {
+	private String ensureValidRefresh(String userId, String role, String incomingRefresh) {
 		if (incomingRefresh == null) {
-			return issueNewRefresh(userId);
+			return issueNewRefresh(userId, role);
 		}
 
 		try {
@@ -165,22 +193,40 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			Claims rc = rjws.getPayload();
 
 			if(!"REFRESH".equals(rc.get("typ"))){
-				return issueNewRefresh(userId);
+				return issueNewRefresh(userId, role);
 			}
 			if(!userId.equals(rc.getSubject())){
-				return issueNewRefresh(userId);
+				return issueNewRefresh(userId, role);
+			}
+			if(!role.equals(resolveRole(rc))){
+				return issueNewRefresh(userId, role);
 			}
 			return incomingRefresh; // 유효하므로 그대로 사용
 
 		}catch(JwtException e){
-			return issueNewRefresh(userId);
+			return issueNewRefresh(userId, role);
 		}
 	}
 
-	private String issueNewRefresh(String userId) {
+	private String issueNewRefresh(String userId, String role) {
+		if (isAdminRole(role)) {
+			Admin admin = adminRepository.findByAdminIdAndIsValidTrue(userId)
+				.orElseThrow(() -> new JwtException("유효하지 않은 관리자입니다."));
+			return jwt.generateAdminRefreshToken(admin);
+		}
+
 		Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
 			.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
 		return jwt.generateRefreshToken(member);
+	}
+
+	private String resolveRole(Claims claims) {
+		String role = claims.get("role", String.class);
+		return role == null ? "USER" : role;
+	}
+
+	private boolean isAdminRole(String role) {
+		return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
 	}
 
 	private void setAuth(String userId, HttpServletRequest req) {
