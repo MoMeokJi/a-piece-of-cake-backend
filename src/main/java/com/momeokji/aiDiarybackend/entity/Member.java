@@ -3,6 +3,7 @@ package com.momeokji.aiDiarybackend.entity;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
 
 import jakarta.persistence.Column;
@@ -33,6 +34,10 @@ public class Member {
 
 	@Column(name = "mobile_os")
 	private String mobileOS;
+
+	@CreationTimestamp
+	@Column(name = "created_at", updatable = false, nullable = false)
+	private LocalDateTime createdAt;
 
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;

@@ -22,6 +22,8 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
 
 	Optional<Diary> findByDiaryIdAndUserIdAndIsValidTrue(Long diaryId, String userId);
 
+	long countByIsValidTrue();
+
 	@Modifying
 	@Query("""
       update Diary d
@@ -66,5 +68,24 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
           and d.deletedAt <= :threshold
     """)
 	int deleteExpired(@Param("threshold") LocalDateTime threshold);
+
+	@Query(
+		value = """
+		SELECT
+			DATE(d.created_at) AS date,
+			COUNT(*) AS totalCount
+		FROM diary d
+		WHERE d.is_valid = 1
+		  AND d.created_at >= :from
+		  AND d.created_at < :to
+		GROUP BY DATE(d.created_at)
+		ORDER BY DATE(d.created_at)
+		""",
+		nativeQuery = true
+	)
+	List<DailyCountStatistics> countDailyDiaries(
+		@Param("from") LocalDateTime from,
+		@Param("to") LocalDateTime to
+	);
 
 }
