@@ -39,10 +39,15 @@ public class AdminAuthController {
 
 		return ResponseEntity.ok()
 			.header(HttpHeaders.AUTHORIZATION, "Bearer " + result.getAccessToken())
-			.header("Refresh-Token", result.getRefreshToken())
 			.body(AdminLoginResponseDto.builder()
 				.isSuper(result.getIsSuper())
 				.build());
+	}
+
+	@PostMapping("/admins/logout")
+	public ResponseEntity<Void> logout(Authentication auth) {
+		adminAuthService.logout(auth.getName());
+		return ResponseEntity.noContent().build();
 	}
 
 	@PostMapping("/admins/approve")

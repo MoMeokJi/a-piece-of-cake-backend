@@ -8,6 +8,5 @@ import lombok.Getter;
 public class AdminLoginResultDto {
 
 	private String accessToken;
-	private String refreshToken;
 	private Boolean isSuper;
 }

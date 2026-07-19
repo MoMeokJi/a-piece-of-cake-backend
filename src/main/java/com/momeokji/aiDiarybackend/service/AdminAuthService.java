@@ -56,9 +56,14 @@ public class AdminAuthService {
 
 		return AdminLoginResultDto.builder()
 			.accessToken(jwt.generateAdminAccessToken(admin))
-			.refreshToken(jwt.generateAdminRefreshToken(admin))
 			.isSuper(admin.getIsSuper())
 			.build();
+	}
+
+	@Transactional(readOnly = true)
+	public void logout(String adminId) {
+		adminRepository.findByAdminIdAndIsValidTrue(adminId)
+			.orElseThrow(() -> new IllegalArgumentException("유효하지 않은 관리자 계정입니다."));
 	}
 
 	@Transactional
