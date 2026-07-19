@@ -2,7 +2,6 @@ package com.momeokji.aiDiarybackend.common.util;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.Map;
 
 import javax.crypto.SecretKey;
 
@@ -55,7 +54,8 @@ public class JwtUtil {
 		return Jwts.builder()
 			.issuer(issuer)
 			.subject(member.getMemberId()) // sub = memberId
-			.claims(Map.of("did", member.getDeviceId(), "typ", typ))
+			.claim("did", member.getDeviceId())
+			.claim("typ", typ)
 			.issuedAt(new Date(now))
 			.expiration(new Date(now + expMs))
 			.signWith(key(), Jwts.SIG.HS256)
@@ -68,7 +68,8 @@ public class JwtUtil {
 		return Jwts.builder()
 			.issuer(issuer)
 			.subject(admin.getAdminId()) // sub = adminId
-			.claims(Map.of("typ", typ, "role", role))
+			.claim("typ", typ)
+			.claim("role", role)
 			.issuedAt(new Date(now))
 			.expiration(new Date(now + expMs))
 			.signWith(key(), Jwts.SIG.HS256)

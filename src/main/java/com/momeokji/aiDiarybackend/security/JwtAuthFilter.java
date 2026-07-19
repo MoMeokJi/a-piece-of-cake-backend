@@ -97,10 +97,23 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 				String userId = ac.getSubject();
 				String role = resolveRole(ac);
 
+				if (isAdminOnlyRequest(req) && !isAdminRole(role)) {
+					SecurityContextHolder.clearContext();
+					res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+					res.setContentType("application/json");
+					res.getWriter().write(
+						"{\"code\":\"FORBIDDEN\",\"message\":\"관리자만 접근할 수 있습니다.\"}"
+					);
+					return;
+				}
+
 				if (isAdminRole(role)) {
 					adminRepository.findByAdminIdAndIsValidTrue(userId)
 						.orElseThrow(() -> new JwtException("유효하지 않은 관리자입니다."));
 					setAuth(userId, req);
+
+					chain.doFilter(req, res);
+					return;
 				} else {
 					memberRepository.findByMemberIdAndIsValidTrue(userId)
 						.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
@@ -111,7 +124,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 					diaryService.updateLastActiveAt(userId);
 				}
 
-				// refresh 유효성 보장: 없거나/무효/만료면 새로 발급해서 내려줌
+				// user refresh 유효성 보장: 없거나/무효/만료면 새로 발급해서 내려줌
 				String ensuredRefresh = ensureValidRefresh(userId, role, refresh);
 
 				res.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + access);
@@ -126,6 +139,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 			} catch (JwtException ignored) {
 				// access 위조/형식오류 → 아래 refresh 로직
 			}
+		}
+
+		if (isAdminRequest(req)) {
+			SecurityContextHolder.clearContext();
+			res.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+			res.setContentType("application/json");
+			res.getWriter().write(
+				"{\"code\":\"TOKEN_EXPIRED\",\"message\":\"Admin access token expired or invalid\"}"
+			);
+			return;
 		}
 
 		// 2) ACCESS 실패 → REFRESH로 자동 리프레시(항상 새 refresh 회전)
@@ -145,11 +168,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 				String newRefresh;
 
 				if (isAdminRole(role)) {
-					Admin admin = adminRepository.findByAdminIdAndIsValidTrue(userId)
-						.orElseThrow(() -> new JwtException("유효하지 않은 관리자입니다."));
-					newAccess = jwt.generateAdminAccessToken(admin);
-					newRefresh = jwt.generateAdminRefreshToken(admin);
-					setAuth(userId, req);
+					throw new JwtException("관리자 refresh token은 지원하지 않습니다.");
 				} else {
 					Member member = memberRepository.findByMemberIdAndIsValidTrue(userId)
 						.orElseThrow(() -> new JwtException("탈퇴한 유저입니다."));
@@ -227,6 +246,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
 	private boolean isAdminRole(String role) {
 		return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
+	}
+
+	private boolean isAdminRequest(HttpServletRequest req) {
+		return isPath(req, "/admins");
+	}
+
+	private boolean isAdminOnlyRequest(HttpServletRequest req) {
+		return isPath(req, "/admins") || isPath(req, "/questions");
+	}
+
+	private boolean isPath(HttpServletRequest req, String basePath) {
+		String path = req.getServletPath();
+		return path.equals(basePath) || path.startsWith(basePath + "/");
 	}
 
 	private void setAuth(String userId, HttpServletRequest req) {
