@@ -10,10 +10,17 @@ import com.google.firebase.messaging.FirebaseMessagingException;
 import com.momeokji.aiDiarybackend.service.FcmService;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/debug/fcm")
+@ConditionalOnProperty(
+	prefix = "app.debug",
+	name = "fcm-enabled",
+	havingValue = "true",
+	matchIfMissing = false
+)
 public class FcmDebugController {
 
 	private final FcmService fcmService;
