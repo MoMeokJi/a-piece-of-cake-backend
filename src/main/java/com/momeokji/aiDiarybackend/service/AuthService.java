@@ -20,7 +20,8 @@ import com.momeokji.aiDiarybackend.repository.MemberRepository;
 import com.momeokji.aiDiarybackend.seed.RefsetSeedLoader;
 
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -64,18 +65,56 @@ public class AuthService {
 			.build();
 	}
 
+	@Transactional
 	public TokenResponseDto refresh(String refreshToken) {
+
+		if (refreshToken == null || refreshToken.isBlank()) {
+			throw new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED,
+				"유효한 refresh token이 필요합니다."
+			);
+		}
+
 		var jws = jwt.parse(refreshToken);
 		var claims = jws.getPayload();
 
-		if (!"REFRESH".equals(claims.get("typ"))){
-			throw new IllegalArgumentException("refresh가 유효하지 않습니다.");
+		if (!"REFRESH".equals(claims.get("typ"))) {
+			throw new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED,
+				"refresh가 유효하지 않습니다."
+			);
+		}
+
+		String role = claims.get("role", String.class);
+
+		// 기존 일반 사용자 토큰에는 role이 없으므로 null도 허용
+		if (role != null && !"USER".equals(role)) {
+			throw new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED,
+				"관리자 refresh token은 지원하지 않습니다."
+			);
 		}
 
 		String userId = claims.getSubject();
-		Member member = memberRepository.findByMemberIdAndIsValidTrue(userId).orElseThrow(()->new IllegalArgumentException("탈퇴 하거나 유효하지 않은 계정"));
 
-		memberRepository.changeLastActiveAt(userId, LocalDateTime.now());
+		if (userId == null || userId.isBlank()) {
+			throw new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED,
+				"유효하지 않은 토큰입니다."
+			);
+		}
+
+		Member member = memberRepository
+			.findByMemberIdAndIsValidTrue(userId)
+			.orElseThrow(() -> new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED,
+				"탈퇴 하거나 유효하지 않은 계정"
+			));
+
+		memberRepository.changeLastActiveAt(
+			userId,
+			LocalDateTime.now()
+		);
 
 		return TokenResponseDto.builder()
 			.accessToken(jwt.generateAccessToken(member))
@@ -107,8 +146,12 @@ public class AuthService {
 
 	@Transactional
 	public TokenResponseDto loginByDeviceId(String deviceId) {
-		Member member = memberRepository.findByDeviceIdAndIsValidTrue(deviceId)
-			.orElseThrow(() -> new IllegalArgumentException("DeviceId가 유효하지 않습니다."));
+		Member member = memberRepository
+			.findByDeviceIdAndIsValidTrue(deviceId)
+			.orElseThrow(() -> new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED,
+				"DeviceId가 유효하지 않습니다."
+			));
 
 		memberRepository.changeLastActiveAt(member.getMemberId(), LocalDateTime.now());
 
