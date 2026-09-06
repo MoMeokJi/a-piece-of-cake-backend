@@ -248,16 +248,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
 	}
 
-	/* 관리자 요청 컨트롤러 생기면 추가해야함*/
+
 	private boolean isAdminRequest(HttpServletRequest req) {
-		return isPath(req, "/admins")
-			|| isPath(req, "/dashboards");
+		return isAdminOnlyRequest(req);
 	}
 
+	/* 관리자 요청 컨트롤러 생기면 추가해야함*/
 	private boolean isAdminOnlyRequest(HttpServletRequest req) {
 		return isPath(req, "/admins")
 			|| isPath(req, "/questions")
-			|| isPath(req, "/dashboards");
+			|| isPath(req, "/dashboards")
+			|| isPath(req, "/musics");
 	}
 
 	private boolean isPath(HttpServletRequest req, String basePath) {
