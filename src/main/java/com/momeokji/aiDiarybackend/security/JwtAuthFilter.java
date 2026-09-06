@@ -81,6 +81,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
 		throws ServletException, IOException {
 
+		res.setCharacterEncoding(
+			java.nio.charset.StandardCharsets.UTF_8.name()
+		);
+
 		final String access  = JwtUtil.resolveBearer(req.getHeader(HttpHeaders.AUTHORIZATION));
 		final String refresh = req.getHeader("Refresh-Token");
 
@@ -258,7 +262,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		return isPath(req, "/admins")
 			|| isPath(req, "/questions")
 			|| isPath(req, "/dashboards")
-			|| isPath(req, "/musics");
+			|| isPath(req, "/musics")
+			|| isPath(req, "/fcmMessages")
+			|| isPath(req, "/debug/fcm");
 	}
 
 	private boolean isPath(HttpServletRequest req, String basePath) {
