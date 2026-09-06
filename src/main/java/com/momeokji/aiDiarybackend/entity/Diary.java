@@ -45,6 +45,7 @@ public class Diary {
 	@Column(name = "recommand_music")
 	private Long recommandMusic;
 
+	@Builder.Default
 	@Column(name = "is_valid", nullable = false)
 	private Boolean isValid = true;
 
