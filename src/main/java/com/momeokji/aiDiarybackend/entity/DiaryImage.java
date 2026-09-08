@@ -39,6 +39,7 @@ public class DiaryImage {
 	@Column(name = "image_url", nullable = false, columnDefinition = "TEXT")
 	private String imageUrl;
 
+	@Builder.Default
 	@Column(name = "is_valid", nullable = false)
 	private Boolean isValid = true;
 

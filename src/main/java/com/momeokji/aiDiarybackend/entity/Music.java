@@ -18,7 +18,7 @@ public class Music {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "videoId")
+    @Column(name = "video_id", nullable = false)
     private String videoId;
 
     @Column(name = "title")

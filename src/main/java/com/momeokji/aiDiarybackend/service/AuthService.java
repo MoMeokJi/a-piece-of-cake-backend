@@ -64,18 +64,29 @@ public class AuthService {
 			.build();
 	}
 
+	@Transactional
 	public TokenResponseDto refresh(String refreshToken) {
 		var jws = jwt.parse(refreshToken);
 		var claims = jws.getPayload();
 
-		if (!"REFRESH".equals(claims.get("typ"))){
-			throw new IllegalArgumentException("refresh가 유효하지 않습니다.");
+		if (!"REFRESH".equals(claims.get("typ"))) {
+			throw new IllegalArgumentException(
+				"refresh가 유효하지 않습니다."
+			);
 		}
 
 		String userId = claims.getSubject();
-		Member member = memberRepository.findByMemberIdAndIsValidTrue(userId).orElseThrow(()->new IllegalArgumentException("탈퇴 하거나 유효하지 않은 계정"));
 
-		memberRepository.changeLastActiveAt(userId, LocalDateTime.now());
+		Member member = memberRepository
+			.findByMemberIdAndIsValidTrue(userId)
+			.orElseThrow(() -> new IllegalArgumentException(
+				"탈퇴 하거나 유효하지 않은 계정"
+			));
+
+		memberRepository.changeLastActiveAt(
+			userId,
+			LocalDateTime.now()
+		);
 
 		return TokenResponseDto.builder()
 			.accessToken(jwt.generateAccessToken(member))
@@ -107,10 +118,16 @@ public class AuthService {
 
 	@Transactional
 	public TokenResponseDto loginByDeviceId(String deviceId) {
-		Member member = memberRepository.findByDeviceIdAndIsValidTrue(deviceId)
-			.orElseThrow(() -> new IllegalArgumentException("DeviceId가 유효하지 않습니다."));
+		Member member = memberRepository
+			.findByDeviceIdAndIsValidTrue(deviceId)
+			.orElseThrow(() -> new IllegalArgumentException(
+				"DeviceId가 유효하지 않습니다."
+			));
 
-		memberRepository.changeLastActiveAt(member.getMemberId(), LocalDateTime.now());
+		memberRepository.changeLastActiveAt(
+			member.getMemberId(),
+			LocalDateTime.now()
+		);
 
 		return TokenResponseDto.builder()
 			.accessToken(jwt.generateAccessToken(member))

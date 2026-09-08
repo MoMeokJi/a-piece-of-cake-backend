@@ -81,6 +81,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain)
 		throws ServletException, IOException {
 
+		res.setCharacterEncoding(
+			java.nio.charset.StandardCharsets.UTF_8.name()
+		);
+
 		final String access  = JwtUtil.resolveBearer(req.getHeader(HttpHeaders.AUTHORIZATION));
 		final String refresh = req.getHeader("Refresh-Token");
 
@@ -248,16 +252,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		return "ADMIN".equals(role) || "SUPER_ADMIN".equals(role);
 	}
 
-	/* 관리자 요청 컨트롤러 생기면 추가해야함*/
+
 	private boolean isAdminRequest(HttpServletRequest req) {
-		return isPath(req, "/admins")
-			|| isPath(req, "/dashboards");
+		return isAdminOnlyRequest(req);
 	}
 
+	/* 관리자 요청 컨트롤러 생기면 추가해야함*/
 	private boolean isAdminOnlyRequest(HttpServletRequest req) {
 		return isPath(req, "/admins")
 			|| isPath(req, "/questions")
-			|| isPath(req, "/dashboards");
+			|| isPath(req, "/dashboards")
+			|| isPath(req, "/musics")
+			|| isPath(req, "/fcmMessages")
+			|| isPath(req, "/debug/fcm");
 	}
 
 	private boolean isPath(HttpServletRequest req, String basePath) {

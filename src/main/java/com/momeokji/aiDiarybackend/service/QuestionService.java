@@ -59,11 +59,20 @@ public class QuestionService {
 	}
 
 	@Transactional
-	public QuestionResponseDto updateQuestion(QuestionUpdateRequestDto req) {
-		Question question = questionRepository.findById(req.getId())
-			.orElseThrow(() -> new IllegalArgumentException("존재하지 않는 질문입니다. id=" + req.getId()));
+	public QuestionResponseDto updateQuestion(
+		Integer questionId,
+		QuestionUpdateRequestDto req
+	) {
+		Question question = questionRepository.findById(questionId)
+			.orElseThrow(() -> new IllegalArgumentException(
+				"존재하지 않는 질문입니다. id=" + questionId
+			));
 
-		question.update(req.getContent(), validateAndNormalizeCategory(req.getCategory()));
+		question.update(
+			req.getContent(),
+			validateAndNormalizeCategory(req.getCategory())
+		);
+
 		return QuestionResponseDto.from(question);
 	}
 

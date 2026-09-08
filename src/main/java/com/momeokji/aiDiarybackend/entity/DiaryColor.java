@@ -40,6 +40,7 @@ public class DiaryColor {
 	@Column(name = "color_name", nullable = false, length = 7) // "#AABBCC"
 	private String colorName;
 
+	@Builder.Default
 	@Column(name = "is_valid", nullable = false)
 	private Boolean isValid = true;
 
