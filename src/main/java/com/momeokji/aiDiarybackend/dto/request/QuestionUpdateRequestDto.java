@@ -7,9 +7,6 @@ import lombok.Getter;
 @Getter
 public class QuestionUpdateRequestDto {
 
-	@NotNull(message = "id는 필수입니다.")
-	private Integer id;
-
 	@NotBlank(message = "content는 필수입니다.")
 	private String content;
 
