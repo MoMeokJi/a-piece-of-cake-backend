@@ -46,6 +46,13 @@ dependencies {
 	//webClient
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+	// macOS 에서 Netty 가 사용하는 네이티브 DNS 리졸버.
+	// 없으면 시작 시 UnsatisfiedLinkError 가 ERROR 로그로 찍히고 시스템 기본 리졸버로 폴백된다.
+	// 버전은 Spring Boot 의 netty-bom 이 관리하므로 명시하지 않는다.
+	// Linux/Windows 에서는 로드되지 않고 무시된다.
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-aarch_64'
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-x86_64'
+
     //youtube
     implementation 'com.google.api-client:google-api-client:1.34.1'
     implementation 'com.google.http-client:google-http-client-jackson2:1.43.3'
