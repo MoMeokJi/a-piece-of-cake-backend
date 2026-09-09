@@ -40,11 +40,11 @@ public class Admin {
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
-	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 0")
+	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT")
 	@ColumnDefault("0")
 	private Boolean isValid;
 
-	@Column(name = "is_super", nullable = false, columnDefinition = "TINYINT DEFAULT 0")
+	@Column(name = "is_super", nullable = false, columnDefinition = "TINYINT")
 	@ColumnDefault("0")
 	private Boolean isSuper;
 

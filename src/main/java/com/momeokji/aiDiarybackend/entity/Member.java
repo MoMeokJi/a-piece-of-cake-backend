@@ -42,7 +42,7 @@ public class Member {
 	@Column(name = "deleted_at")
 	private LocalDateTime deletedAt;
 
-	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT DEFAULT 1")
+	@Column(name = "is_valid", nullable = false, columnDefinition = "TINYINT")
 	@ColumnDefault("1")
 	private Boolean isValid;
 
