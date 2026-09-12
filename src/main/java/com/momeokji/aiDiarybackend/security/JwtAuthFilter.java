@@ -46,6 +46,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		"/error"
 	);
 
+	/**
+	 * API 명세(Swagger) 경로의 접두사.
+	 *
+	 * <p>이 필터는 {@code @Component} 라서 시큐리티 필터 체인과 별개로 모든 요청에 등록된다.
+	 * 따라서 SecurityConfig 에서 Swagger 를 열어주더라도 여기서 먼저 걸러내지 않으면 401 이 난다.
+	 * 실제 접근 제어(비밀번호 여부)는 SecurityConfig 의 Swagger 전용 체인이 담당한다.
+	 */
+	private static final List<String> SWAGGER_PATH_PREFIXES = List.of(
+		"/swagger-ui",
+		"/v3/api-docs"
+	);
+
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
 		String method = request.getMethod();
@@ -59,6 +71,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 		}
 
 		if (path.startsWith("/error")){
+			return true;
+		}
+
+		if (SWAGGER_PATH_PREFIXES.stream().anyMatch(path::startsWith)) {
 			return true;
 		}
 
