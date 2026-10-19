@@ -8,14 +8,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.jwt.JwtClaimNames;
-import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.web.client.RestTemplate;
 
@@ -53,20 +49,12 @@ public class SocialTokenDecoderConfig {
 	/** 만료 + iss ∈ {https://accounts.google.com, accounts.google.com} + aud 가 허용 목록과 겹침. */
 	public static OAuth2TokenValidator<Jwt> googleValidator(List<String> clientIds) {
 		List<String> allowed = clientIds == null ? List.of() : clientIds;
-		return new DelegatingOAuth2TokenValidator<>(
-			new JwtTimestampValidator(),
-			new JwtClaimValidator<Object>(JwtClaimNames.ISS, iss -> iss != null && GOOGLE_ISSUERS.contains(String.valueOf(iss))),
-			new JwtClaimValidator<List<String>>(JwtClaimNames.AUD,
-				aud -> aud != null && aud.stream().anyMatch(allowed::contains)));
+		return JwtValidators.timestampIssuerAudience(GOOGLE_ISSUERS, aud -> aud.stream().anyMatch(allowed::contains));
 	}
 
 	/** 만료 + iss = https://appleid.apple.com + aud 에 번들 ID 포함. */
 	public static OAuth2TokenValidator<Jwt> appleValidator(String clientId) {
-		return new DelegatingOAuth2TokenValidator<>(
-			new JwtTimestampValidator(),
-			new JwtClaimValidator<Object>(JwtClaimNames.ISS, iss -> iss != null && APPLE_ISSUER.equals(String.valueOf(iss))),
-			new JwtClaimValidator<List<String>>(JwtClaimNames.AUD,
-				aud -> aud != null && clientId != null && aud.contains(clientId)));
+		return JwtValidators.timestampIssuerAudience(Set.of(APPLE_ISSUER), aud -> clientId != null && aud.contains(clientId));
 	}
 
 	private static NimbusJwtDecoder jwksDecoder(String jwksUri) {

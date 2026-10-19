@@ -57,6 +57,14 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 	}
 
 	@Test
+	void corsResponseDoesNotExposeAuthorizationHeader() throws Exception {
+		// 토큰은 응답 본문으로 내려가므로 Authorization 응답 헤더를 노출할 이유가 없다.
+		mockMvc.perform(get("/health").header(HttpHeaders.ORIGIN, "http://localhost:3000"))
+			.andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:3000"))
+			.andExpect(header().doesNotExist(HttpHeaders.ACCESS_CONTROL_EXPOSE_HEADERS));
+	}
+
+	@Test
 	void validMemberTokenReachesMe() throws Exception {
 		String memberId = saveMember();
 

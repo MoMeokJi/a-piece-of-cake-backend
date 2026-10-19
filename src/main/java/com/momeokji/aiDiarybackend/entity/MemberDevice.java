@@ -113,10 +113,6 @@ public class MemberDevice {
 		this.fcmToken = fcmToken;
 	}
 
-	public void clearFcmToken() {
-		this.fcmToken = null;
-	}
-
 	public boolean isRefreshExpired(LocalDateTime now) {
 		return !now.isBefore(refreshExpiresAt);
 	}

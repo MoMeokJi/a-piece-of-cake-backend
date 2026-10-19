@@ -212,7 +212,7 @@ public class SecurityConfig {
 		));
 		cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS"));
 		cfg.addAllowedHeader("*");
-		cfg.setExposedHeaders(List.of("Authorization"));
+		// 토큰은 응답 본문으로 내려가므로 노출할 응답 헤더가 없다.
 		cfg.setAllowCredentials(true);
 		cfg.setMaxAge(3600L);
 
