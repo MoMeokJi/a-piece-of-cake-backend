@@ -84,6 +84,42 @@ class SocialLoginServiceTest {
 	}
 
 	@Test
+	void existingAccountWithEmailInTokenUpdatesEmail() {
+		SocialIdentity identity = new SocialIdentity(SocialProvider.GOOGLE, "sub-1", "new@x.com");
+		when(googleVerifier.verify("id-token")).thenReturn(identity);
+		when(socialAccountRepository.findByProviderAndProviderUserId(SocialProvider.GOOGLE, "sub-1"))
+			.thenReturn(Optional.of(SocialAccount.link("m-existing", SocialProvider.GOOGLE, "sub-1", "old@x.com")));
+
+		service.loginWithGoogle(request("id-token"));
+
+		verify(registrar).updateEmailIfPresent(any(), eq("new@x.com"));
+	}
+
+	@Test
+	void existingAccountWithoutEmailInTokenSkipsEmailUpdate() {
+		SocialIdentity identity = new SocialIdentity(SocialProvider.GOOGLE, "sub-1", null);
+		when(googleVerifier.verify("id-token")).thenReturn(identity);
+		when(socialAccountRepository.findByProviderAndProviderUserId(SocialProvider.GOOGLE, "sub-1"))
+			.thenReturn(Optional.of(SocialAccount.link("m-existing", SocialProvider.GOOGLE, "sub-1", "old@x.com")));
+
+		service.loginWithGoogle(request("id-token"));
+
+		verify(registrar, never()).updateEmailIfPresent(any(), any());
+	}
+
+	@Test
+	void existingAccountWithBlankEmailInTokenSkipsEmailUpdate() {
+		SocialIdentity identity = new SocialIdentity(SocialProvider.GOOGLE, "sub-1", "  ");
+		when(googleVerifier.verify("id-token")).thenReturn(identity);
+		when(socialAccountRepository.findByProviderAndProviderUserId(SocialProvider.GOOGLE, "sub-1"))
+			.thenReturn(Optional.of(SocialAccount.link("m-existing", SocialProvider.GOOGLE, "sub-1", "old@x.com")));
+
+		service.loginWithGoogle(request("id-token"));
+
+		verify(registrar, never()).updateEmailIfPresent(any(), any());
+	}
+
+	@Test
 	void unrelatedIntegrityViolationPropagates() {
 		SocialIdentity identity = new SocialIdentity(SocialProvider.GOOGLE, "sub-1", null);
 		when(googleVerifier.verify("id-token")).thenReturn(identity);

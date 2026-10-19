@@ -80,7 +80,10 @@ public class SocialLoginService {
 	private ResolvedAccount resolveAccount(SocialIdentity identity) {
 		Optional<SocialAccount> existing = find(identity);
 		if (existing.isPresent()) {
-			registrar.updateEmailIfPresent(existing.get().getId(), identity.email());
+			// 애플 재로그인처럼 email 이 없는 토큰이면 쓰기 트랜잭션 자체를 열지 않는다.
+			if (hasText(identity.email())) {
+				registrar.updateEmailIfPresent(existing.get().getId(), identity.email());
+			}
 			return new ResolvedAccount(existing.get(), false);
 		}
 		try {
@@ -90,6 +93,10 @@ public class SocialLoginService {
 			log.info("동시 첫 로그인으로 유니크 위반 → 기존 회원으로 처리. provider={}", identity.provider());
 			return new ResolvedAccount(raced, false);
 		}
+	}
+
+	private static boolean hasText(String s) {
+		return s != null && !s.isBlank();
 	}
 
 	private Optional<SocialAccount> find(SocialIdentity identity) {
