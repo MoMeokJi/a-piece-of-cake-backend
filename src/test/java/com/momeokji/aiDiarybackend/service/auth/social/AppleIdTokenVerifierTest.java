@@ -46,6 +46,11 @@ class AppleIdTokenVerifierTest {
 	}
 
 	@Test
+	void missingSubIsInvalid() {
+		assertInvalid(TestSocialTokens.appleWithoutSub(CLIENT_ID, NONCE_HASH), RAW_NONCE);
+	}
+
+	@Test
 	void wrongIssuerIsInvalid() {
 		assertInvalid(TestSocialTokens.appleWithIssuer("https://accounts.google.com", "sub-a", CLIENT_ID, NONCE_HASH), RAW_NONCE);
 	}

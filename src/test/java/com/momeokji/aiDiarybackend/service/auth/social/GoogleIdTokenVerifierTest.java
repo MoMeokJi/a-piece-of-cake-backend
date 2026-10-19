@@ -65,6 +65,11 @@ class GoogleIdTokenVerifierTest {
 	}
 
 	@Test
+	void missingSubIsInvalid() {
+		assertInvalid(TestSocialTokens.googleWithoutSub("ios-client"));
+	}
+
+	@Test
 	void garbageIsInvalid() {
 		assertInvalid("not-a-jwt");
 	}

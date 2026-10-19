@@ -39,7 +39,7 @@ public class AppleIdTokenVerifier {
 		if (nonceClaim == null || rawNonce == null || !constantTimeEquals(nonceClaim, RefreshTokens.sha256Hex(rawNonce))) {
 			throw new BusinessException(ErrorCode.SOCIAL_TOKEN_INVALID, "nonce가 일치하지 않습니다.");
 		}
-		return new SocialIdentity(SocialProvider.APPLE, jwt.getSubject(), jwt.getClaimAsString("email"));
+		return new SocialIdentity(SocialProvider.APPLE, SocialTokenErrors.requireSubject(jwt), jwt.getClaimAsString("email"));
 	}
 
 	private static boolean constantTimeEquals(String a, String b) {

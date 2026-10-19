@@ -61,6 +61,16 @@ public final class TestSocialTokens {
 		return sign(OTHER_KEY_PAIR, claims(GOOGLE_ISSUER, sub, aud, Instant.now().plusSeconds(600)).build());
 	}
 
+	/** {@code sub} 가 없는 구글 토큰. 서명·iss·aud·exp 는 모두 정상이다. */
+	public static String googleWithoutSub(String aud) {
+		return sign(KEY_PAIR, claims(GOOGLE_ISSUER, null, aud, Instant.now().plusSeconds(600)).build());
+	}
+
+	/** {@code sub} 가 없는 애플 토큰. 서명·iss·aud·exp·nonce 는 모두 정상이다. */
+	public static String appleWithoutSub(String aud, String nonceHash) {
+		return sign(KEY_PAIR, claims(APPLE_ISSUER, null, aud, Instant.now().plusSeconds(600)).claim("nonce", nonceHash).build());
+	}
+
 	public static String apple(String sub, String aud, String nonceHash, String email) {
 		JWTClaimsSet.Builder b = claims(APPLE_ISSUER, sub, aud, Instant.now().plusSeconds(600));
 		if (nonceHash != null) {

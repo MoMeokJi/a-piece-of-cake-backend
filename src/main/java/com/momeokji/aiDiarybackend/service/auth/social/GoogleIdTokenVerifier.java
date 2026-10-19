@@ -21,7 +21,7 @@ public class GoogleIdTokenVerifier {
 	public SocialIdentity verify(String idToken) {
 		try {
 			Jwt jwt = decoder.decode(idToken);
-			return new SocialIdentity(SocialProvider.GOOGLE, jwt.getSubject(), jwt.getClaimAsString("email"));
+			return new SocialIdentity(SocialProvider.GOOGLE, SocialTokenErrors.requireSubject(jwt), jwt.getClaimAsString("email"));
 		} catch (JwtException e) {
 			throw SocialTokenErrors.translate(e);
 		}
