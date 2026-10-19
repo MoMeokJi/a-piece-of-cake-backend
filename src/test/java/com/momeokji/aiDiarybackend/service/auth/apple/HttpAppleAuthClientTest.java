@@ -12,8 +12,10 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 
 import java.util.Optional;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -21,6 +23,11 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import com.momeokji.aiDiarybackend.config.OAuthProperties;
+
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 
 class HttpAppleAuthClientTest {
 
@@ -73,13 +80,63 @@ class HttpAppleAuthClientTest {
 
 	@Test
 	void exchangeWhenSecretCannotBeBuiltIsEmpty() {
+		assertThat(clientWithoutKey().exchangeAuthorizationCode("code")).isEmpty();
+	}
+
+	@Test
+	void exchangeWhenSecretCannotBeBuiltLogsError() {
+		ListAppender<ILoggingEvent> logs = captureLogs();
+
+		clientWithoutKey().exchangeAuthorizationCode("code");
+
+		assertThat(logs.list).extracting(ILoggingEvent::getLevel).contains(Level.ERROR);
+		assertThat(logs.list).extracting(ILoggingEvent::getLevel).doesNotContain(Level.WARN);
+	}
+
+	@Test
+	void revokeWhenSecretCannotBeBuiltLogsError() {
+		ListAppender<ILoggingEvent> logs = captureLogs();
+
+		assertThat(clientWithoutKey().revoke("rt-1")).isFalse();
+
+		assertThat(logs.list).extracting(ILoggingEvent::getLevel).contains(Level.ERROR);
+	}
+
+	@Test
+	void exchangeHttpFailureStaysWarn() {
+		ListAppender<ILoggingEvent> logs = captureLogs();
+		server.expect(requestTo(BASE + "/auth/token"))
+			.andRespond(withStatus(HttpStatus.BAD_REQUEST).body("{\"error\":\"invalid_grant\"}").contentType(MediaType.APPLICATION_JSON));
+
+		client.exchangeAuthorizationCode("bad-code");
+
+		assertThat(logs.list).extracting(ILoggingEvent::getLevel).contains(Level.WARN);
+		assertThat(logs.list).extracting(ILoggingEvent::getLevel).doesNotContain(Level.ERROR);
+	}
+
+	/** 설정·키 파일 문제로 client_secret 을 만들 수 없는 클라이언트. */
+	private static HttpAppleAuthClient clientWithoutKey() {
 		AppleClientSecretFactory broken = mock(AppleClientSecretFactory.class);
 		when(broken.create()).thenThrow(new IllegalStateException("no key"));
 		OAuthProperties props = new OAuthProperties(new OAuthProperties.Google(null),
 			new OAuthProperties.Apple("com.momeokji.cake", "TEAM", "KID", null, null, BASE));
-		HttpAppleAuthClient noKey = new HttpAppleAuthClient(RestClient.builder(), props, broken);
+		return new HttpAppleAuthClient(RestClient.builder(), props, broken);
+	}
 
-		assertThat(noKey.exchangeAuthorizationCode("code")).isEmpty();
+	ListAppender<ILoggingEvent> appender;
+
+	private ListAppender<ILoggingEvent> captureLogs() {
+		appender = new ListAppender<>();
+		appender.start();
+		((Logger) LoggerFactory.getLogger(HttpAppleAuthClient.class)).addAppender(appender);
+		return appender;
+	}
+
+	@AfterEach
+	void detachLogs() {
+		if (appender != null) {
+			((Logger) LoggerFactory.getLogger(HttpAppleAuthClient.class)).detachAppender(appender);
+		}
 	}
 
 	@Test

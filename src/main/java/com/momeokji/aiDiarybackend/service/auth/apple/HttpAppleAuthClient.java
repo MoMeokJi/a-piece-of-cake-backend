@@ -48,6 +48,10 @@ public class HttpAppleAuthClient implements AppleAuthClient {
 			}
 			log.warn("애플 code 교환 응답에 refresh_token 이 없습니다.");
 			return Optional.empty();
+		} catch (IllegalStateException e) {
+			// 설정·키 파일 문제는 운영자가 고쳐야 하는 장애라 ERROR 로 남긴다. 애플 쪽 거부(WARN)와 구분한다.
+			log.error("애플 client_secret 을 만들 수 없어 code 교환을 건너뜁니다: {}", e.getMessage());
+			return Optional.empty();
 		} catch (Exception e) {
 			log.warn("애플 authorization code 교환 실패: {}", e.getMessage());
 			return Optional.empty();
