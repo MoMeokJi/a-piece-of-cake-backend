@@ -2,6 +2,7 @@ package com.momeokji.aiDiarybackend.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -28,7 +29,9 @@ public interface MemberDeviceRepository extends JpaRepository<MemberDevice, Stri
 
 	List<MemberDevice> findByFcmTokenIsNotNull();
 
-	boolean existsByMemberIdAndFcmTokenIsNotNull(String memberId);
+	/** 푸시 가능한 기기가 하나라도 있는 회원 ID 집합. 스케줄러가 회원마다 exists 쿼리를 날리는 대신 한 번에 읽는다. */
+	@Query("select distinct d.memberId from MemberDevice d where d.fcmToken is not null")
+	Set<String> findMemberIdsWithFcmToken();
 
 	/**
 	 * 같은 FCM 토큰을 가진 다른 기기 행에서 토큰을 지운다. 푸시 주소 하나는 항상 한 기기(한 회원)에만 붙는다.

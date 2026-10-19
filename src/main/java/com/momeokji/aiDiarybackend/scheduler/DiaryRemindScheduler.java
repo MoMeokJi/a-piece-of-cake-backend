@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -40,13 +41,15 @@ public class DiaryRemindScheduler {
 		LocalDate today = LocalDate.now(kst);
 
 		List<Member> members = memberRepository.findByIsValidTrue();
-		log.info("REMIND 체크 대상 회원 수 = {}", members.size());
+		// 회원마다 exists 쿼리를 날리는 대신 푸시 가능한 회원 ID 를 한 번에 읽어 거른다.
+		Set<String> pushable = memberDeviceRepository.findMemberIdsWithFcmToken();
+		log.info("REMIND 체크 대상 회원 수 = {}, 푸시 가능 회원 수 = {}", members.size(), pushable.size());
 
 		for (Member member : members) {
 			String memberId = member.getMemberId();
 
 			// 푸시 가능한 기기가 없으면 스킵
-			if (!memberDeviceRepository.existsByMemberIdAndFcmTokenIsNotNull(memberId)) {
+			if (!pushable.contains(memberId)) {
 				continue;
 			}
 

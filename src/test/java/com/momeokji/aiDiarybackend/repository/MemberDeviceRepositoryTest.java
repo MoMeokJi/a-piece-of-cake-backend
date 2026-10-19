@@ -94,12 +94,13 @@ class MemberDeviceRepositoryTest {
 	}
 
 	@Test
-	void existsPushableDeviceOnlyWhenFcmTokenPresent() {
+	void memberIdsWithFcmTokenAreDistinctAndExcludeTokenlessMembers() {
 		repository.save(MemberDevice.open("dev-a", "m1", "IOS", null, "h1", EXPIRES, NOW));
 		repository.save(MemberDevice.open("dev-b", "m2", "IOS", "fcm-Y", "h2", EXPIRES, NOW));
+		repository.save(MemberDevice.open("dev-c", "m2", "AND", "fcm-Z", "h3", EXPIRES, NOW));
+		repository.save(MemberDevice.open("dev-d", "m3", "AND", "fcm-W", "h4", EXPIRES, NOW));
 		em.flush();
 
-		assertThat(repository.existsByMemberIdAndFcmTokenIsNotNull("m1")).isFalse();
-		assertThat(repository.existsByMemberIdAndFcmTokenIsNotNull("m2")).isTrue();
+		assertThat(repository.findMemberIdsWithFcmToken()).containsExactlyInAnyOrder("m2", "m3");
 	}
 }
