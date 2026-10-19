@@ -1,60 +1,78 @@
 package com.momeokji.aiDiarybackend.controller;
 
-import com.momeokji.aiDiarybackend.dto.request.MemberLoginRequestDto;
-import com.momeokji.aiDiarybackend.dto.request.MemberSignupRequestDto;
-import com.momeokji.aiDiarybackend.dto.response.TokenResponseDto;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.momeokji.aiDiarybackend.dto.request.AppleLoginRequestDto;
+import com.momeokji.aiDiarybackend.dto.request.FcmTokenUpdateRequestDto;
+import com.momeokji.aiDiarybackend.dto.request.GoogleLoginRequestDto;
+import com.momeokji.aiDiarybackend.dto.request.LogoutRequestDto;
+import com.momeokji.aiDiarybackend.dto.request.RefreshTokenRequestDto;
+import com.momeokji.aiDiarybackend.dto.response.AuthTokenResponseDto;
 import com.momeokji.aiDiarybackend.service.AuthService;
+import com.momeokji.aiDiarybackend.service.auth.DeviceSessionService;
+import com.momeokji.aiDiarybackend.service.auth.SocialLoginService;
+
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
-
+/**
+ * 앱 인증 API(스펙 6.1, 6.2). 토큰은 응답 바디로만 전달한다.
+ * 인증이 필요한 요청의 {@code auth.getName()} 은 member_id 다.
+ */
 @RestController
 @RequiredArgsConstructor
 public class AuthController {
 
+	private final SocialLoginService socialLoginService;
+	private final DeviceSessionService deviceSessionService;
 	private final AuthService authService;
 
-	//회원가입, 로그인
-	@PostMapping("/users")
-	public ResponseEntity<Void> signup(@Validated @RequestBody MemberSignupRequestDto req) {
-		TokenResponseDto tokens = authService.issueTokens(req);
-		return ResponseEntity.noContent()
-			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.getAccessToken())
-			.header("Refresh-Token", tokens.getRefreshToken())
-			.build();
+	/** 구글 소셜 가입/로그인 (공개) */
+	@PostMapping("/auth/social/google")
+	public ResponseEntity<AuthTokenResponseDto> loginWithGoogle(@Validated @RequestBody GoogleLoginRequestDto req) {
+		return ResponseEntity.ok(AuthTokenResponseDto.from(socialLoginService.loginWithGoogle(req)));
 	}
 
-	// 토큰 리프레시
+	/** 애플 소셜 가입/로그인 (공개) */
+	@PostMapping("/auth/social/apple")
+	public ResponseEntity<AuthTokenResponseDto> loginWithApple(@Validated @RequestBody AppleLoginRequestDto req) {
+		return ResponseEntity.ok(AuthTokenResponseDto.from(socialLoginService.loginWithApple(req)));
+	}
+
+	/** refresh 회전 (공개). 자동 로그인은 이 API 로 한다. */
 	@PostMapping("/auth/refresh")
-	public ResponseEntity<Void> refresh(@RequestHeader("Refresh-Token") String refreshToken) {
-		TokenResponseDto tokens = authService.refresh(refreshToken);
-		return ResponseEntity.noContent()
-			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.getAccessToken())
-			.header("Refresh-Token", tokens.getRefreshToken())
-			.build();
+	public ResponseEntity<AuthTokenResponseDto> refresh(@Validated @RequestBody RefreshTokenRequestDto req) {
+		return ResponseEntity.ok(AuthTokenResponseDto.from(deviceSessionService.rotate(req.getRefreshToken(), req.getDeviceId())));
 	}
 
-	//재 로그인(리프레시 토큰 재발급)
-	@PostMapping("/auth/login")
-	public ResponseEntity<Void> login(@Validated @RequestBody MemberLoginRequestDto req) {
-		TokenResponseDto tokens = authService.loginByDeviceId(req.getDeviceId());
-		return ResponseEntity.noContent()
-			.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokens.getAccessToken())
-			.header("Refresh-Token", tokens.getRefreshToken())
-			.build();
+	/** 이 기기의 세션을 끊는다. 행이 없어도 204(멱등). */
+	@PostMapping("/auth/logout")
+	public ResponseEntity<Void> logout(@Validated @RequestBody LogoutRequestDto req, Authentication auth) {
+		deviceSessionService.logout(auth.getName(), req.getDeviceId());
+		return ResponseEntity.noContent().build();
 	}
 
+	/** FCM 토큰 갱신 콜백용. 내 기기가 아니면 404 DEVICE_NOT_FOUND. */
+	@PutMapping("/auth/devices/fcm-token")
+	public ResponseEntity<Void> updateFcmToken(@Validated @RequestBody FcmTokenUpdateRequestDto req, Authentication auth) {
+		deviceSessionService.updateFcmToken(auth.getName(), req.getDeviceId(), req.getFcmToken());
+		return ResponseEntity.noContent().build();
+	}
 
-	//userId 확인용
+	/** userId 확인용 */
 	@GetMapping("/me")
-	public ResponseEntity<String> me(org.springframework.security.core.Authentication auth) {
-		return ResponseEntity.ok(auth.getName()); // JwtAuthFilter에서 principal=userId
+	public ResponseEntity<String> me(Authentication auth) {
+		return ResponseEntity.ok(auth.getName());
 	}
 
+	/** 탈퇴 */
 	@DeleteMapping("/users")
 	public ResponseEntity<Void> withdraw(Authentication auth) {
 		authService.withdraw(auth);
@@ -62,7 +80,7 @@ public class AuthController {
 	}
 
 	@GetMapping("/health")
-	public ResponseEntity<String> helath(){
+	public ResponseEntity<String> health() {
 		return ResponseEntity.ok("OK");
 	}
 }

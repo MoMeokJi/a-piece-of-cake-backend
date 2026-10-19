@@ -160,7 +160,7 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 
 	private String saveMember() {
 		String memberId = java.util.UUID.randomUUID().toString();
-		memberRepository.save(Member.builder().memberId(memberId).build());
+		memberRepository.save(Member.create(memberId));
 		return memberId;
 	}
 

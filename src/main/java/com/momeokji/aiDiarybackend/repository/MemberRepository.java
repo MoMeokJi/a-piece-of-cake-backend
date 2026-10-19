@@ -18,13 +18,7 @@ public interface MemberRepository extends JpaRepository<Member,String> {
 
 	long countByIsValidTrue();
 
-	Optional<Member> findByDeviceId(String deviceId);
-
-	Optional<Member> findByDeviceIdAndIsValidTrue(String deviceId);
-
 	Optional<Member> findByMemberIdAndIsValidTrue(String memberId);
-
-	List<Member> findByIsValidTrueAndLastActiveAtBefore(LocalDateTime time);
 
 	@Transactional
 	@Modifying
@@ -38,16 +32,6 @@ public interface MemberRepository extends JpaRepository<Member,String> {
 		@Param("now") LocalDateTime now);
 
 	List<Member> findByIsValidTrue();
-
-	@Modifying
-	@Query("""
-		update Member m
-		   set m.lastActiveAt = :now
-		 where m.memberId = :memberId
-		   and m.isValid = true
-		""")
-	int changeLastActiveAt(@Param("memberId") String memberId,
-		@Param("now") LocalDateTime now);
 
 	@Query(
 		value = """

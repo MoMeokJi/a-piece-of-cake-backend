@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -22,9 +23,11 @@ import org.springframework.web.client.RestTemplate;
  * 소셜 ID 토큰 디코더(스펙 5.1~5.3). 공급자 JWKS 로 서명을 검증한다. Nimbus 가 키를 캐시하고,
  * 모르는 kid 가 오면 다시 받아온다.
  *
- * <p>검증 규칙은 정적 메서드로 두어 테스트 디코더가 같은 규칙을 쓴다.
+ * <p>검증 규칙은 정적 메서드로 두어 테스트 디코더가 같은 규칙을 쓴다. 테스트는 {@code oauth.jwks-enabled=false} 로
+ * 이 설정을 끄고 자체 키 디코더를 같은 빈 이름으로 등록한다.
  */
 @Configuration
+@ConditionalOnProperty(name = "oauth.jwks-enabled", havingValue = "true", matchIfMissing = true)
 public class SocialTokenDecoderConfig {
 
 	public static final String GOOGLE_JWKS_URI = "https://www.googleapis.com/oauth2/v3/certs";

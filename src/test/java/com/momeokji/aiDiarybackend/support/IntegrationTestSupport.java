@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -24,6 +25,7 @@ import com.momeokji.aiDiarybackend.service.push.FcmSender;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestSocialConfig.class)
 public abstract class IntegrationTestSupport {
 
 	@Autowired
@@ -41,8 +43,12 @@ public abstract class IntegrationTestSupport {
 	@MockitoBean
 	protected FcmSender fcmSender;
 
+	@Autowired
+	protected FakeAppleAuthClient fakeAppleAuthClient;
+
 	@AfterEach
 	void cleanDatabase() {
+		fakeAppleAuthClient.reset();
 		jdbcTemplate.execute("SET REFERENTIAL_INTEGRITY FALSE");
 		// DATABASE_TO_LOWER=TRUE 라서 스키마 이름이 'public' 으로 저장된다. 문자열 상수 대신 현재 스키마를 쓴다.
 		List<String> tables = jdbcTemplate.queryForList(

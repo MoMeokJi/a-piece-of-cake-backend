@@ -408,9 +408,4 @@ public class DiaryService {
 			.build();
 	}
 
-	@Transactional
-	public void updateLastActiveAt(String userId) {
-		memberRepository.changeLastActiveAt(userId, LocalDateTime.now());
-	}
-
 }
