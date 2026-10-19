@@ -21,8 +21,10 @@ import org.springframework.test.context.ActiveProfiles;
 import com.momeokji.aiDiarybackend.common.error.BusinessException;
 import com.momeokji.aiDiarybackend.common.error.ErrorCode;
 import com.momeokji.aiDiarybackend.config.JwtProperties;
+import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.entity.MemberDevice;
 import com.momeokji.aiDiarybackend.repository.MemberDeviceRepository;
+import com.momeokji.aiDiarybackend.repository.MemberRepository;
 import com.momeokji.aiDiarybackend.security.AccessTokenIssuer;
 import com.momeokji.aiDiarybackend.security.RefreshTokens;
 
@@ -38,6 +40,9 @@ class DeviceSessionServiceTest {
 	MemberDeviceRepository repo;
 
 	@Autowired
+	MemberRepository memberRepository;
+
+	@Autowired
 	TestEntityManager em;
 
 	MutableClock clock;
@@ -50,7 +55,10 @@ class DeviceSessionServiceTest {
 			new JwtProperties.MemberToken("member-secret-0123456789-0123456789-abc", Duration.ofMinutes(30), Duration.ofDays(60)),
 			new JwtProperties.AdminToken("admin-secret-0123456789-0123456789-xyz", Duration.ofHours(2)));
 		clock = new MutableClock(Instant.now());
-		service = new DeviceSessionService(repo, new AccessTokenIssuer(props, clock), props, clock);
+		service = new DeviceSessionService(repo, memberRepository, new AccessTokenIssuer(props, clock), props, clock);
+		// rotate 는 유효 회원인지 확인하므로 테스트에서 쓰는 회원을 미리 만들어 둔다.
+		memberRepository.save(Member.create("m1"));
+		memberRepository.save(Member.create("m2"));
 	}
 
 	@Test
@@ -110,6 +118,17 @@ class DeviceSessionServiceTest {
 	void expiredRefreshDeletesSessionAndIsInvalid() {
 		IssuedTokens t1 = service.openSession("m1", DEVICE_A, "IOS", null);
 		clock.advance(Duration.ofDays(60).plusSeconds(1));
+
+		assertThatThrownBy(() -> service.rotate(t1.refreshToken(), DEVICE_A))
+			.isInstanceOf(BusinessException.class)
+			.extracting(e -> ((BusinessException) e).getErrorCode()).isEqualTo(ErrorCode.REFRESH_INVALID);
+		assertThat(repo.findById(DEVICE_A)).isEmpty();
+	}
+
+	@Test
+	void rotateForInvalidatedMemberDeletesSessionAndIsInvalid() {
+		IssuedTokens t1 = service.openSession("m1", DEVICE_A, "IOS", null);
+		memberRepository.softDeleteOne("m1", java.time.LocalDateTime.now(clock));
 
 		assertThatThrownBy(() -> service.rotate(t1.refreshToken(), DEVICE_A))
 			.isInstanceOf(BusinessException.class)

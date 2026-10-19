@@ -13,6 +13,7 @@ import com.momeokji.aiDiarybackend.common.error.ErrorCode;
 import com.momeokji.aiDiarybackend.config.JwtProperties;
 import com.momeokji.aiDiarybackend.entity.MemberDevice;
 import com.momeokji.aiDiarybackend.repository.MemberDeviceRepository;
+import com.momeokji.aiDiarybackend.repository.MemberRepository;
 import com.momeokji.aiDiarybackend.security.AccessTokenIssuer;
 import com.momeokji.aiDiarybackend.security.IssuedAccessToken;
 import com.momeokji.aiDiarybackend.security.RefreshTokens;
@@ -32,13 +33,15 @@ public class DeviceSessionService {
 	public static final Duration REFRESH_RETRY_GRACE = Duration.ofSeconds(60);
 
 	private final MemberDeviceRepository memberDeviceRepository;
+	private final MemberRepository memberRepository;
 	private final AccessTokenIssuer accessTokenIssuer;
 	private final JwtProperties jwtProperties;
 	private final Clock clock;
 
-	public DeviceSessionService(MemberDeviceRepository memberDeviceRepository, AccessTokenIssuer accessTokenIssuer,
-		JwtProperties jwtProperties, Clock clock) {
+	public DeviceSessionService(MemberDeviceRepository memberDeviceRepository, MemberRepository memberRepository,
+		AccessTokenIssuer accessTokenIssuer, JwtProperties jwtProperties, Clock clock) {
 		this.memberDeviceRepository = memberDeviceRepository;
+		this.memberRepository = memberRepository;
 		this.accessTokenIssuer = accessTokenIssuer;
 		this.jwtProperties = jwtProperties;
 		this.clock = clock;
@@ -75,6 +78,12 @@ public class DeviceSessionService {
 
 		MemberDevice device = memberDeviceRepository.findWithLockByDeviceId(deviceId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.REFRESH_INVALID));
+
+		// 탈퇴(is_valid=0)한 회원의 세션이 남아 있으면 지우고 끊는다. 새 access 토큰을 내주면 안 된다.
+		if (memberRepository.findByMemberIdAndIsValidTrue(device.getMemberId()).isEmpty()) {
+			memberDeviceRepository.delete(device);
+			throw new BusinessException(ErrorCode.REFRESH_INVALID);
+		}
 
 		if (hash.equals(device.getRefreshTokenHash())) {
 			if (device.isRefreshExpired(now)) {
