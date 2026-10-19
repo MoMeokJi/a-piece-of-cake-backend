@@ -86,8 +86,9 @@ class GlobalExceptionHandlerTest {
 		mockMvc.perform(post("/throw/refresh-invalid"))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("REFRESH_INVALID"))
+			// 서버가 토큰 문제의 종류를 알려 줄 수 없으니(error 파라미터 없음) scheme 만 알린다.
 			.andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
-				.header().string("WWW-Authenticate", containsString("Bearer")));
+				.header().string("WWW-Authenticate", "Bearer"));
 	}
 
 	@RestController

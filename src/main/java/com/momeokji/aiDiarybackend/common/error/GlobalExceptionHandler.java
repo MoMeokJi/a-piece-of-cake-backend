@@ -93,8 +93,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 		HttpHeaders headers = new HttpHeaders();
 		headers.setContentType(MediaType.APPLICATION_PROBLEM_JSON);
 		if (problem.getStatus() == HttpStatus.UNAUTHORIZED.value()) {
-			// RFC 6750: 401 에는 WWW-Authenticate 를 붙인다(스펙 9.1).
-			headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer error=\"invalid_token\"");
+			// RFC 6750: 401 에는 WWW-Authenticate 를 붙인다(스펙 9.1). 여기서 나는 401 은 refresh 토큰 문제 등
+			// Bearer 토큰 자체의 문제가 아닐 수 있으므로 error 파라미터 없이 scheme 만 알린다.
+			headers.set(HttpHeaders.WWW_AUTHENTICATE, "Bearer");
 		}
 		return ResponseEntity.status(problem.getStatus()).headers(headers).body(problem);
 	}
