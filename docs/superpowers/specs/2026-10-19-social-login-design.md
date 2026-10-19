@@ -485,7 +485,7 @@ oauth.apple.token-encryption-key=${APPLE_TOKEN_ENCRYPTION_KEY}
 4. Apple `.p8` 키 파일을 서버에 배치(레포에 커밋 금지)
 5. `docs/db/2026-10-19-social-login-schema.sql` 실행
 6. 새 서버 배포
-7. `docs/db/2026-10-19-cleanup-anonymous-members.sql` 실행 및 Redis 키 정리
+7. `docs/db/2026-10-19-cleanup-anonymous-members.sql` 실행 및 Redis 키 정리 (소셜 계정이 없는 회원만 대상이라 순서·횟수에 안전)
 8. 새 앱(강제 업데이트)과 관리자 웹 배포
 
 ## 14. 준비가 필요한 외부 값 (팀)

@@ -39,9 +39,13 @@ public interface MemberDeviceRepository extends JpaRepository<MemberDevice, Stri
 	@Query("update MemberDevice d set d.fcmToken = null where d.fcmToken = :fcmToken and d.deviceId <> :deviceId")
 	int detachFcmTokenFromOthers(@Param("fcmToken") String fcmToken, @Param("deviceId") String deviceId);
 
-	/** FCM 이 무효라고 응답한 토큰을 정리한다. 트랜잭션 없는 곳(스케줄러, 디버그 API)에서도 호출되므로 자체 트랜잭션을 둔다. */
+	/**
+	 * FCM 이 무효라고 응답한 토큰을 정리한다. 트랜잭션 없는 곳(스케줄러, 디버그 API)에서도 호출되므로 자체 트랜잭션을 둔다.
+	 * 영속성 컨텍스트를 비우지 않는다 — 호출자(DiarySympathyScheduler)가 같은 트랜잭션에서 다른 엔티티를
+	 * 더티체킹으로 저장하는 중일 수 있고, clear 하면 그 변경이 유실된다.
+	 */
 	@Transactional
-	@Modifying(clearAutomatically = true, flushAutomatically = true)
+	@Modifying
 	@Query("update MemberDevice d set d.fcmToken = null where d.fcmToken = :fcmToken")
 	int clearFcmToken(@Param("fcmToken") String fcmToken);
 

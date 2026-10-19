@@ -24,7 +24,9 @@ import org.springframework.test.context.ActiveProfiles;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.MessagingErrorCode;
+import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.MemberDevice;
+import com.momeokji.aiDiarybackend.repository.DiaryRepository;
 import com.momeokji.aiDiarybackend.repository.MemberDeviceRepository;
 import com.momeokji.aiDiarybackend.service.push.FcmSender;
 
@@ -37,6 +39,9 @@ class FcmServiceTest {
 
 	@Autowired
 	MemberDeviceRepository repo;
+
+	@Autowired
+	DiaryRepository diaryRepository;
 
 	@Autowired
 	TestEntityManager em;
@@ -88,8 +93,32 @@ class FcmServiceTest {
 		service.sendToMember("m1", "t", "b", null);
 
 		verify(sender, times(2)).send(any());
+		em.clear(); // 벌크 UPDATE 는 영속성 컨텍스트를 비우지 않으므로 DB 상태를 다시 읽는다
 		assertThat(repo.findById("dev-a").orElseThrow().getFcmToken()).isNull();
 		assertThat(repo.findById("dev-b").orElseThrow().getFcmToken()).isEqualTo("fcm-B");
+	}
+
+	@Test
+	void clearingInvalidTokenDoesNotDetachOtherEntitiesInSameTransaction() throws Exception {
+		// DiarySympathyScheduler 는 한 트랜잭션에서 일기를 순회하며 feedbackMsg 를 더티체킹으로 저장하고 푸시를 보낸다.
+		// 중간에 무효 토큰 정리가 일어나도 그 뒤 일기의 변경이 커밋되어야 한다.
+		device("dev-a", "m1", "AND", "fcm-A");
+		Diary first = diaryRepository.save(Diary.builder().userId("m1").content("1").build());
+		Diary second = diaryRepository.save(Diary.builder().userId("m1").content("2").build());
+		em.flush();
+		FirebaseMessagingException unregistered = mock(FirebaseMessagingException.class);
+		when(unregistered.getMessagingErrorCode()).thenReturn(MessagingErrorCode.UNREGISTERED);
+		when(sender.send(any())).thenThrow(unregistered);
+
+		first.updateFeedbackMsg("공감 1");
+		service.feedbackNotification("m1", first.getDiaryId());   // 여기서 fcm-A 정리
+		second.updateFeedbackMsg("공감 2");
+		em.flush();
+		em.clear();
+
+		assertThat(diaryRepository.findById(first.getDiaryId()).orElseThrow().getFeedbackMsg()).isEqualTo("공감 1");
+		assertThat(diaryRepository.findById(second.getDiaryId()).orElseThrow().getFeedbackMsg()).isEqualTo("공감 2");
+		assertThat(repo.findById("dev-a").orElseThrow().getFcmToken()).isNull();
 	}
 
 	@Test
@@ -101,6 +130,7 @@ class FcmServiceTest {
 
 		service.sendToMember("m1", "t", "b", null);
 
+		em.clear();
 		assertThat(repo.findById("dev-a").orElseThrow().getFcmToken()).isNull();
 	}
 
