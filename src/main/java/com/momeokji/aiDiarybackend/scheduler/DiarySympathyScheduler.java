@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
 import com.momeokji.aiDiarybackend.service.FcmService;
@@ -54,12 +53,8 @@ public class DiarySympathyScheduler {
 
 				log.info("공감알림 생성 완료 diaryId={}", diary.getDiaryId());
 
-				try{
-					fcmService.feedbackNotification(diary.getUserId(),diary.getDiaryId());
-				}catch (FirebaseMessagingException e){
-					log.error("FCM 공감알림 발송 실패 diaryId={} userId={}",
-						diary.getDiaryId(), diary.getUserId(), e);
-				}
+				// 발송 실패는 FcmService 가 로그로 처리하고 예외를 던지지 않는다
+				fcmService.feedbackNotification(diary.getUserId(), diary.getDiaryId());
 
 			} catch (Exception e) {
 				log.error("공감알림 생성 실패 diaryId={}", diary.getDiaryId(), e);

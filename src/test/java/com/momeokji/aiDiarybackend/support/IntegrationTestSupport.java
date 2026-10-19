@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.momeokji.aiDiarybackend.service.RedisService;
+import com.momeokji.aiDiarybackend.service.push.FcmSender;
 
 /**
  * 통합 테스트 베이스. H2(MySQL 모드) 위에서 전체 컨텍스트를 띄우고 MockMvc 로 호출한다.
@@ -36,6 +37,9 @@ public abstract class IntegrationTestSupport {
 
 	@MockitoBean
 	protected RedisService redisService;
+
+	@MockitoBean
+	protected FcmSender fcmSender;
 
 	@AfterEach
 	void cleanDatabase() {

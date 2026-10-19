@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
 import com.momeokji.aiDiarybackend.service.FcmService;
 
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,7 @@ public class FcmDebugController {
 	private final FcmService fcmService;
 
 	@PostMapping("/remind/{memberId}")
-	public ResponseEntity<String> testRemind(@PathVariable String memberId) throws FirebaseMessagingException {
+	public ResponseEntity<String> testRemind(@PathVariable String memberId) {
 		fcmService.remindNotification(memberId);
 		return ResponseEntity.ok("remind sent (check logs)");
 	}
@@ -34,7 +33,7 @@ public class FcmDebugController {
 	@PostMapping("/feedback/{memberId}/{diaryId}")
 	public ResponseEntity<String> testFeedback(
 		@PathVariable String memberId,
-		@PathVariable Long diaryId) throws FirebaseMessagingException {
+		@PathVariable Long diaryId) {
 		fcmService.feedbackNotification(memberId, diaryId);
 		return ResponseEntity.ok("feedback sent (check logs)");
 	}
