@@ -14,7 +14,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/debug/fcm")
+@RequestMapping("/admin/debug/fcm")
 @ConditionalOnProperty(
 	prefix = "app.debug",
 	name = "fcm-enabled",

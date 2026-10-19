@@ -15,7 +15,7 @@ import com.momeokji.aiDiarybackend.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/dashboards")
+@RequestMapping("/admin/dashboards")
 @RequiredArgsConstructor
 public class DashboardController {
 

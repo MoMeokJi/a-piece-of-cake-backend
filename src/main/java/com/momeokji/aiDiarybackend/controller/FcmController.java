@@ -17,7 +17,7 @@ public class FcmController {
 
 	private final FcmService fcmService;
 
-	@PostMapping("/fcmMessages")
+	@PostMapping("/admin/fcm-messages")
 	public ResponseEntity<Void> sendFcmMessage(
 		@Valid @RequestBody FcmMessageRequestDto request
 	) {
