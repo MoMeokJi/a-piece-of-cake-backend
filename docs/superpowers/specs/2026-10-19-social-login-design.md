@@ -97,8 +97,8 @@
 | `member_id` | VARCHAR(255), NOT NULL | 지금 이 기기에 로그인한 회원 |
 | `os` | VARCHAR(10), NOT NULL | `AND`, `IOS` |
 | `fcm_token` | VARCHAR(512), NULL, UNIQUE | 푸시 주소 |
-| `refresh_token_hash` | CHAR(64), NOT NULL, UNIQUE | 현재 refresh 토큰의 SHA-256(hex) |
-| `prev_refresh_token_hash` | CHAR(64), NULL | 직전 refresh 해시. 재사용 감지용 |
+| `refresh_token_hash` | VARCHAR(64), NOT NULL, UNIQUE | 현재 refresh 토큰의 SHA-256(hex) |
+| `prev_refresh_token_hash` | VARCHAR(64), NULL | 직전 refresh 해시. 재사용 감지용 |
 | `rotated_at` | DATETIME(6), NULL | 마지막 회전 시각 |
 | `refresh_expires_at` | DATETIME(6), NOT NULL | refresh 만료 시각 |
 | `last_used_at` | DATETIME(6), NOT NULL | 마지막 로그인 또는 refresh 시각 |
