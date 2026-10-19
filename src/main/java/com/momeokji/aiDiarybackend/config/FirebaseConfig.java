@@ -8,6 +8,7 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
@@ -15,6 +16,8 @@ import jakarta.annotation.PostConstruct;
 
 @Slf4j
 @Configuration
+// firebase.enabled=false 로 두면 초기화를 건너뛴다(테스트용). 기본값은 켜짐이라 운영 동작은 그대로다.
+@ConditionalOnProperty(name = "firebase.enabled", havingValue = "true", matchIfMissing = true)
 public class FirebaseConfig {
 
 	@Value("${firebase.credentials.path}")

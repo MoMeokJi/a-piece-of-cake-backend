@@ -25,6 +25,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	// 테스트용 인메모리 DB (MySQL 호환 모드). 로컬에 Docker 가 없어 Testcontainers 대신 사용한다.
+	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'me.paulschwarz:spring-dotenv:2.5.4'
     implementation 'me.paulschwarz:spring-dotenv:2.5.4'
