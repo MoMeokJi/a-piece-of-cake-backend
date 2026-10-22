@@ -3,7 +3,6 @@ package com.momeokji.aiDiarybackend.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -16,7 +15,6 @@ import com.momeokji.aiDiarybackend.dto.request.GoogleLoginRequestDto;
 import com.momeokji.aiDiarybackend.dto.request.LogoutRequestDto;
 import com.momeokji.aiDiarybackend.dto.request.RefreshTokenRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.AuthTokenResponseDto;
-import com.momeokji.aiDiarybackend.service.AuthService;
 import com.momeokji.aiDiarybackend.service.auth.DeviceSessionService;
 import com.momeokji.aiDiarybackend.service.auth.SocialLoginService;
 
@@ -32,7 +30,6 @@ public class AuthController {
 
 	private final SocialLoginService socialLoginService;
 	private final DeviceSessionService deviceSessionService;
-	private final AuthService authService;
 
 	/** 구글 소셜 가입/로그인 (공개) */
 	@PostMapping("/auth/social/google")
@@ -63,19 +60,6 @@ public class AuthController {
 	@PutMapping("/auth/devices/fcm-token")
 	public ResponseEntity<Void> updateFcmToken(@Validated @RequestBody FcmTokenUpdateRequestDto req, Authentication auth) {
 		deviceSessionService.updateFcmToken(auth.getName(), req.getDeviceId(), req.getFcmToken());
-		return ResponseEntity.noContent().build();
-	}
-
-	/** userId 확인용 */
-	@GetMapping("/me")
-	public ResponseEntity<String> me(Authentication auth) {
-		return ResponseEntity.ok(auth.getName());
-	}
-
-	/** 탈퇴 */
-	@DeleteMapping("/users")
-	public ResponseEntity<Void> withdraw(Authentication auth) {
-		authService.withdraw(auth);
 		return ResponseEntity.noContent().build();
 	}
 

@@ -43,10 +43,18 @@ public class Member {
 	@ColumnDefault("1")
 	private Boolean isValid;
 
+	/** 앱에서 보이는 이름. 가입 직후에는 없고, 닉네임 설정 화면에서 정한다. 유니크하지 않다. */
+	@Column(name = "nickname", length = 10)
+	private String nickname;
+
 	public static Member create(String memberId) {
 		Member member = new Member();
 		member.memberId = memberId;
 		member.isValid = true;
 		return member;
+	}
+
+	public void changeNickname(String nickname) {
+		this.nickname = nickname;
 	}
 }

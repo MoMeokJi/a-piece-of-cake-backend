@@ -48,7 +48,7 @@ class SocialLoginServiceTest {
 		service = new SocialLoginService(googleVerifier, appleVerifier, socialAccountRepository, registrar,
 			deviceSessionService, appleAuthClient, appleTokenCipher, redisService, refsetSeedLoader);
 		when(deviceSessionService.openSession(any(), any(), any(), any()))
-			.thenReturn(new IssuedTokens("a", 1800, "r", 5_184_000));
+			.thenReturn(new IssuedTokens("a", 1800, "r", 5_184_000, null));
 	}
 
 	@Test

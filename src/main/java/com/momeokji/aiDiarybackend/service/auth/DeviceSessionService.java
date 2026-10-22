@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.momeokji.aiDiarybackend.common.error.BusinessException;
 import com.momeokji.aiDiarybackend.common.error.ErrorCode;
 import com.momeokji.aiDiarybackend.config.JwtProperties;
+import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.entity.MemberDevice;
 import com.momeokji.aiDiarybackend.repository.MemberDeviceRepository;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
@@ -64,7 +65,9 @@ public class DeviceSessionService {
 		} else {
 			memberDeviceRepository.save(MemberDevice.open(deviceId, memberId, os, fcmToken, hash, expiresAt, now));
 		}
-		return issue(memberId, refreshToken);
+		// 응답에 실을 닉네임. 로그인 직후 호출되므로 회원 행은 이미 있다.
+		String nickname = memberRepository.findById(memberId).map(Member::getNickname).orElse(null);
+		return issue(memberId, refreshToken, nickname);
 	}
 
 	/**
@@ -80,7 +83,8 @@ public class DeviceSessionService {
 			.orElseThrow(() -> new BusinessException(ErrorCode.REFRESH_INVALID));
 
 		// 탈퇴(is_valid=0)한 회원의 세션이 남아 있으면 지우고 끊는다. 새 access 토큰을 내주면 안 된다.
-		if (memberRepository.findByMemberIdAndIsValidTrue(device.getMemberId()).isEmpty()) {
+		Member member = memberRepository.findByMemberIdAndIsValidTrue(device.getMemberId()).orElse(null);
+		if (member == null) {
 			memberDeviceRepository.delete(device);
 			throw new BusinessException(ErrorCode.REFRESH_INVALID);
 		}
@@ -90,13 +94,13 @@ public class DeviceSessionService {
 				memberDeviceRepository.delete(device);
 				throw new BusinessException(ErrorCode.REFRESH_INVALID);
 			}
-			return rotateAndIssue(device, now);
+			return rotateAndIssue(device, member, now);
 		}
 
 		if (hash.equals(device.getPrevRefreshTokenHash())) {
 			if (device.isWithinRetryGrace(now, REFRESH_RETRY_GRACE) && !device.isRefreshExpired(now)) {
 				// 네트워크 재시도: 직전 토큰으로 다시 왔다. 한 번 더 회전해서 새 쌍을 준다.
-				return rotateAndIssue(device, now);
+				return rotateAndIssue(device, member, now);
 			}
 			// 유예를 넘긴 직전 토큰 → 탈취로 판단. 세션을 끊는다.
 			log.warn("refresh 토큰 재사용 감지. deviceId={}, memberId={}", deviceId, device.getMemberId());
@@ -129,15 +133,15 @@ public class DeviceSessionService {
 		memberDeviceRepository.deleteByMemberId(memberId);
 	}
 
-	private IssuedTokens rotateAndIssue(MemberDevice device, LocalDateTime now) {
+	private IssuedTokens rotateAndIssue(MemberDevice device, Member member, LocalDateTime now) {
 		String refreshToken = RefreshTokens.generate();
 		device.rotate(RefreshTokens.sha256Hex(refreshToken), now.plus(refreshTtl()), now);
-		return issue(device.getMemberId(), refreshToken);
+		return issue(device.getMemberId(), refreshToken, member.getNickname());
 	}
 
-	private IssuedTokens issue(String memberId, String refreshToken) {
+	private IssuedTokens issue(String memberId, String refreshToken, String nickname) {
 		IssuedAccessToken access = accessTokenIssuer.issueForMember(memberId);
-		return new IssuedTokens(access.value(), access.expiresInSeconds(), refreshToken, refreshTtl().toSeconds());
+		return new IssuedTokens(access.value(), access.expiresInSeconds(), refreshToken, refreshTtl().toSeconds(), nickname);
 	}
 
 	private Duration refreshTtl() {

@@ -220,7 +220,8 @@
   "accessTokenExpiresIn": 1800,
   "refreshToken": "string",
   "refreshTokenExpiresIn": 5184000,
-  "isNewMember": true
+  "isNewMember": true,
+  "nickname": null
 }
 ```
 
@@ -267,7 +268,15 @@
 내 소유 기기만 바꿀 수 있고, 아니면 `DEVICE_NOT_FOUND`(404)다. FCM 토큰 유니크 규칙(3.5)을 적용한다.
 
 ### 6.2 앱 회원
-- **`GET /me`** (USER): 기존 그대로 `memberId` 문자열을 응답한다.
+- **`GET /users/me`** (USER): 내 정보. `{ "memberId": "UUID 문자열", "nickname": "달콤한조각" | null }`. 기존 `GET /me`(문자열 응답)는 제거했다(2026-10-22).
+- **`PUT /users/me/nickname`** (USER): 닉네임 설정·수정. 가입 흐름(로그인 → 약관 → 닉네임)과 마이페이지가 같은 API 를 쓴다.
+  ```json
+  요청 { "nickname": "달콤한조각" }
+  응답 200 { "nickname": "달콤한조각" }
+  ```
+  규칙은 완성형 한글·영문·숫자 2~10자(`^[가-힣A-Za-z0-9]{2,10}$`)이고 그 외는 `VALIDATION_FAILED`(400)다. 공백은 자르지 않고 거부한다.
+  유니크 제약은 없다(다른 회원의 닉네임을 볼 일이 없다). 소셜 토큰의 이름은 저장하지 않으며, 미리 채우기는 앱이 SDK 값으로 한다.
+- 소셜 로그인·refresh 응답(6.1)에는 `nickname` 이 함께 내려간다. 가입 직후와 닉네임을 아직 정하지 않은 기존 회원은 `null` 이고, 앱은 그때 닉네임 설정 화면으로 보낸다.
 - **`DELETE /users`** (USER, 탈퇴): 경로는 유지한다. 처리 순서는 다음과 같다.
   1. 애플 계정이면 revoke를 호출한다(실패해도 계속 진행).
   2. 해당 회원의 `social_account`, `member_device` 행을 삭제한다.

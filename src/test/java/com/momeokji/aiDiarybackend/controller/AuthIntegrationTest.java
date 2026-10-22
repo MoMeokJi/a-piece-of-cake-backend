@@ -59,7 +59,8 @@ class AuthIntegrationTest extends IntegrationTestSupport {
 			.andExpect(jsonPath("$.accessTokenExpiresIn").value(1800))
 			.andExpect(jsonPath("$.refreshToken").isString())
 			.andExpect(jsonPath("$.refreshTokenExpiresIn").value(5_184_000))
-			.andExpect(jsonPath("$.isNewMember").value(true)));
+			.andExpect(jsonPath("$.isNewMember").value(true))
+			.andExpect(jsonPath("$.nickname").value((Object) null)));
 
 		String memberId = me(body.get("accessToken").asText());
 		assertThat(memberId).isNotBlank();
@@ -272,6 +273,27 @@ class AuthIntegrationTest extends IntegrationTestSupport {
 	}
 
 	@Test
+	void loginAndRefreshCarryNicknameOnceSet() throws Exception {
+		JsonNode first = json(googleLogin("sub-1", DEVICE_A, null));
+		putNickname(first.get("accessToken").asText(), "달콤한조각").andExpect(status().isOk());
+
+		json(googleLogin("sub-1", DEVICE_B, null)
+			.andExpect(jsonPath("$.isNewMember").value(false))
+			.andExpect(jsonPath("$.nickname").value("달콤한조각")));
+		json(refresh(first.get("refreshToken").asText(), DEVICE_A)
+			.andExpect(jsonPath("$.nickname").value("달콤한조각")));
+	}
+
+	@Test
+	void refreshBeforeNicknameSetReturnsNull() throws Exception {
+		JsonNode login = json(googleLogin("sub-1", DEVICE_A, null));
+
+		refresh(login.get("refreshToken").asText(), DEVICE_A)
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.nickname").value((Object) null));
+	}
+
+	@Test
 	void newMemberGetsRefsetSeed() throws Exception {
 		String memberId = me(json(googleLogin("sub-1", DEVICE_A, null)).get("accessToken").asText());
 
@@ -312,9 +334,17 @@ class AuthIntegrationTest extends IntegrationTestSupport {
 	}
 
 	private String me(String accessToken) throws Exception {
-		return mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+		String body = mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
 			.andExpect(status().isOk())
 			.andReturn().getResponse().getContentAsString();
+		return objectMapper.readTree(body).get("memberId").asText();
+	}
+
+	private ResultActions putNickname(String accessToken, String nickname) throws Exception {
+		return mockMvc.perform(put("/users/me/nickname")
+			.header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(objectMapper.writeValueAsString(Map.of("nickname", nickname))));
 	}
 
 	private JsonNode json(ResultActions actions) throws Exception {

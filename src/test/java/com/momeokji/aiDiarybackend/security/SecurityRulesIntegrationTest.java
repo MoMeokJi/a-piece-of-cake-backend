@@ -48,11 +48,11 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 
 	@Test
 	void noTokenOnProtectedApiIsUnauthorized() throws Exception {
-		mockMvc.perform(get("/me"))
+		mockMvc.perform(get("/users/me"))
 			.andExpect(status().isUnauthorized())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
 			.andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
-			.andExpect(jsonPath("$.instance").value("/me"))
+			.andExpect(jsonPath("$.instance").value("/users/me"))
 			.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Bearer")));
 	}
 
@@ -68,9 +68,9 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 	void validMemberTokenReachesMe() throws Exception {
 		String memberId = saveMember();
 
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + issuer.issueForMember(memberId).value()))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + issuer.issueForMember(memberId).value()))
 			.andExpect(status().isOk())
-			.andExpect(content().string(memberId));
+			.andExpect(jsonPath("$.memberId").value(memberId));
 	}
 
 	@Test
@@ -78,7 +78,7 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 		String memberId = saveMember();
 		AccessTokenIssuer past = new AccessTokenIssuer(jwtProperties, Clock.offset(Clock.systemUTC(), Duration.ofMinutes(-31)));
 
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + past.issueForMember(memberId).value()))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + past.issueForMember(memberId).value()))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"))
 			.andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("invalid_token")));
@@ -97,7 +97,7 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 	void adminTokenOnAppApiIsTokenInvalid() throws Exception {
 		Admin admin = saveAdmin("root", true, true);
 
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + issuer.issueForAdmin(admin).value()))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + issuer.issueForAdmin(admin).value()))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
 	}
@@ -107,7 +107,7 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 		String memberId = saveMember();
 		String token = signWithMemberKeyWithoutRole(memberId);
 
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
 	}
@@ -118,14 +118,14 @@ class SecurityRulesIntegrationTest extends IntegrationTestSupport {
 		String token = issuer.issueForMember(memberId).value();
 		memberRepository.softDeleteOne(memberId, LocalDateTime.now());
 
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
 	}
 
 	@Test
 	void garbageBearerIsTokenInvalid() throws Exception {
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-jwt"))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
 	}

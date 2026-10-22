@@ -126,6 +126,27 @@ class DeviceSessionServiceTest {
 	}
 
 	@Test
+	void openSessionAndRotateCarryMemberNickname() {
+		Member m1 = memberRepository.findById("m1").orElseThrow();
+		m1.changeNickname("달콤한조각");
+		memberRepository.saveAndFlush(m1);
+
+		IssuedTokens opened = service.openSession("m1", DEVICE_A, "IOS", null);
+		IssuedTokens rotated = service.rotate(opened.refreshToken(), DEVICE_A);
+
+		assertThat(opened.nickname()).isEqualTo("달콤한조각");
+		assertThat(rotated.nickname()).isEqualTo("달콤한조각");
+	}
+
+	@Test
+	void nicknameIsNullUntilSet() {
+		IssuedTokens opened = service.openSession("m2", DEVICE_A, "IOS", null);
+
+		assertThat(opened.nickname()).isNull();
+		assertThat(service.rotate(opened.refreshToken(), DEVICE_A).nickname()).isNull();
+	}
+
+	@Test
 	void rotateForInvalidatedMemberDeletesSessionAndIsInvalid() {
 		IssuedTokens t1 = service.openSession("m1", DEVICE_A, "IOS", null);
 		memberRepository.softDeleteOne("m1", java.time.LocalDateTime.now(clock));

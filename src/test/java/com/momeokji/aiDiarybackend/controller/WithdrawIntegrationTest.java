@@ -52,7 +52,7 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		assertThat(memberDeviceRepository.findAll()).isEmpty();
 		assertThat(memberRepository.findById(memberId)).get().extracting(Member::getIsValid).isEqualTo(false);
 		verify(redisService).deleteUserData(memberId);
-		mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + access))
+		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + access))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
 	}
@@ -135,7 +135,8 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 	}
 
 	private String me(String accessToken) throws Exception {
-		return mockMvc.perform(get("/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
+		String body = mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken))
 			.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+		return objectMapper.readTree(body).get("memberId").asText();
 	}
 }
