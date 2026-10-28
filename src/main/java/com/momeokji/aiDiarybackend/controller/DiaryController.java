@@ -28,6 +28,7 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryListResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryPageResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.service.DiaryService;
 import com.momeokji.aiDiarybackend.service.QuestionService;
@@ -105,8 +106,9 @@ public class DiaryController {
 
 
 
+	/** 페이지 목록. sort=recent(기본)|oldest, created 는 oldest 의 별칭. */
 	@GetMapping
-	public List<DiaryListResponseDto> list(
+	public DiaryPageResponseDto list(
 		Authentication auth,
 		@RequestParam(defaultValue = "recent") String sort,
 		@RequestParam(defaultValue = "0") Integer page,
@@ -115,11 +117,15 @@ public class DiaryController {
 		return diaryService.getList(auth, sort, page, size);
 	}
 
+	/** 월 단위 전체 목록. year/month 생략 시 KST 이번 달. sort 는 목록과 같다. */
 	@GetMapping("/calendar")
-	public ResponseEntity<List<DiaryListResponseDto>> getCalendar(Authentication auth, @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
-
-		List<DiaryListResponseDto> result = diaryService.getCalendar(auth, year, month);
-		return ResponseEntity.ok(result);
+	public ResponseEntity<List<DiaryListResponseDto>> getCalendar(
+		Authentication auth,
+		@RequestParam(required = false) Integer year,
+		@RequestParam(required = false) Integer month,
+		@RequestParam(defaultValue = "recent") String sort
+	) {
+		return ResponseEntity.ok(diaryService.getCalendar(auth, year, month, sort));
 	}
 
 

@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,7 +19,7 @@ import com.momeokji.aiDiarybackend.entity.Diary;
 public interface DiaryRepository extends JpaRepository<Diary,Long> {
 	Page<Diary> findByUserIdAndIsValidTrue(String userId, Pageable pageable);
 
-	List<Diary> findByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAsc(String userId, LocalDateTime from, LocalDateTime to);
+	List<Diary> findByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(String userId, LocalDateTime from, LocalDateTime to, Sort sort);
 
 	Optional<Diary> findByDiaryIdAndUserIdAndIsValidTrue(Long diaryId, String userId);
 

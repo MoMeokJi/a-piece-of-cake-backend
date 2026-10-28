@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,68 @@ class DiaryIntegrationTest extends DiaryTestSupport {
 
 		mockMvc.perform(get("/diaries/" + diaryId).header(AUTHORIZATION, "Bearer " + token))
 			.andExpect(jsonPath("$.type").value("QNA"));
+	}
+
+	@Test
+	void listReturnsPageMeta() throws Exception {
+		String token = loginAsMember("sub-1");
+		String memberId = memberIdOf(token);
+		for (int day = 1; day <= 3; day++) {
+			insertDiary(memberId, LocalDateTime.of(2025, 9, day, 12, 0));
+		}
+
+		mockMvc.perform(get("/diaries").param("size", "2").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.items.length()").value(2))
+			.andExpect(jsonPath("$.page").value(0))
+			.andExpect(jsonPath("$.size").value(2))
+			.andExpect(jsonPath("$.hasNext").value(true))
+			.andExpect(jsonPath("$.totalCount").value(3));
+
+		mockMvc.perform(get("/diaries").param("size", "2").param("page", "1").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.items.length()").value(1))
+			.andExpect(jsonPath("$.hasNext").value(false));
+	}
+
+	@Test
+	void sortOldestAndCreatedAlias() throws Exception {
+		String token = loginAsMember("sub-1");
+		String memberId = memberIdOf(token);
+		Diary first = insertDiary(memberId, LocalDateTime.of(2025, 9, 1, 12, 0));
+		insertDiary(memberId, LocalDateTime.of(2025, 9, 2, 12, 0));
+		Diary last = insertDiary(memberId, LocalDateTime.of(2025, 9, 3, 12, 0));
+
+		mockMvc.perform(get("/diaries").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.items[0].diaryId").value(last.getDiaryId()));
+		mockMvc.perform(get("/diaries").param("sort", "oldest").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.items[0].diaryId").value(first.getDiaryId()));
+		mockMvc.perform(get("/diaries").param("sort", "created").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.items[0].diaryId").value(first.getDiaryId()));
+	}
+
+	@Test
+	void calendarAcceptsSort() throws Exception {
+		String token = loginAsMember("sub-1");
+		String memberId = memberIdOf(token);
+		LocalDate thisMonth = LocalDate.now().withDayOfMonth(1);
+		Diary first = insertDiary(memberId, thisMonth.atTime(9, 0));
+		Diary last = insertDiary(memberId, thisMonth.plusDays(1).atTime(9, 0));
+
+		mockMvc.perform(get("/diaries/calendar").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.length()").value(2))
+			.andExpect(jsonPath("$[0].diaryId").value(last.getDiaryId()));
+		mockMvc.perform(get("/diaries/calendar").param("sort", "oldest").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$[0].diaryId").value(first.getDiaryId()));
+	}
+
+	@Test
+	void unknownSortIsBadRequest() throws Exception {
+		String token = loginAsMember("sub-1");
+
+		mockMvc.perform(get("/diaries").param("sort", "weird").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("BAD_REQUEST"));
 	}
 
 	// ---- helpers ----

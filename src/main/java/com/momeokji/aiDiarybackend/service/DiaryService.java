@@ -3,12 +3,14 @@ package com.momeokji.aiDiarybackend.service;
 import com.momeokji.aiDiarybackend.common.error.BusinessException;
 import com.momeokji.aiDiarybackend.common.error.ErrorCode;
 import com.momeokji.aiDiarybackend.common.time.KstTime;
+import com.momeokji.aiDiarybackend.dto.DiarySort;
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryListResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryPageResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.DiaryColor;
@@ -29,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,8 +38,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -202,20 +201,37 @@ public class DiaryService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<DiaryListResponseDto> getList(Authentication auth, String sort, Integer page, Integer size) {
+	public DiaryPageResponseDto getList(Authentication auth, String sort, Integer page, Integer size) {
 		final String userId = auth.getName();
 
 		int p = (page == null || page < 0) ? 0  : page;
 		int s = (size == null || size <= 0) ? 10 : size;
-
-		// sort=recent(기본): 최신순 desc, sort=created: 오래된순 asc
-		Sort.Direction dir = "created".equalsIgnoreCase(sort) ? Sort.Direction.ASC : Sort.Direction.DESC;
-		Pageable pageable = PageRequest.of(p, s, Sort.by(dir, "createdAt"));
+		Pageable pageable = PageRequest.of(p, s, DiarySort.parse(sort).byCreatedAt());
 
 		Page<Diary> pageData = diaryRepository.findByUserIdAndIsValidTrue(userId, pageable);
-		List<Diary> diaries = pageData.getContent();
+		return DiaryPageResponseDto.of(pageData, toListDtos(pageData.getContent()));
+	}
 
-		// 색상 한 번에 조회 후 매핑
+	/** 월 단위 전체 목록. year/month 가 없거나 범위 밖이면 KST 기준 이번 달이다. */
+	@Transactional(readOnly = true)
+	public List<DiaryListResponseDto> getCalendar(Authentication auth, Integer year, Integer month, String sort) {
+		final String userId = auth.getName();
+
+		LocalDate today = LocalDate.now(KstTime.ZONE);
+		int y = (year == null || year < 1) ? today.getYear()  : year;
+		int m = (month == null || month < 1 || month > 12) ? today.getMonthValue() : month;
+
+		LocalDate first = LocalDate.of(y, m, 1);
+		LocalDateTime from = first.atStartOfDay();             // 포함
+		LocalDateTime to   = first.plusMonths(1).atStartOfDay(); // 미포함
+
+		List<Diary> diaries = diaryRepository.findByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+			userId, from, to, DiarySort.parse(sort).byCreatedAt());
+		return toListDtos(diaries);
+	}
+
+	/** 목록·캘린더 공용 매핑. 색상과 음악은 각각 한 번의 IN 조회로 가져온다. */
+	private List<DiaryListResponseDto> toListDtos(List<Diary> diaries) {
 		List<Long> diaryIds = diaries.stream().map(Diary::getDiaryId).toList();
 		Map<Long, List<String>> colorMap = diaryIds.isEmpty()
 			? Map.of()
@@ -226,23 +242,18 @@ public class DiaryService {
 				Collectors.mapping(DiaryColor::getColorName, Collectors.toList())
 			));
 
-		// 음악 한번에 조회 후 매핑
 		List<Long> musicIds = diaries.stream()
 			.map(Diary::getRecommandMusic)
 			.filter(id -> id != null)
 			.distinct()
 			.toList();
-
 		Map<Long, Music> musicMap = musicIds.isEmpty()
 			? Map.of()
 			: musicRepository.findByIdIn(musicIds).stream()
 			.collect(Collectors.toMap(Music::getId, m -> m));
 
-
-		// DTO 매핑
 		return diaries.stream().map(d -> {
 			Music m = (d.getRecommandMusic() != null) ? musicMap.get(d.getRecommandMusic()) : null;
-
 			DiaryListResponseDto.MusicDto musicDto = null;
 			if (m != null) {
 				musicDto = DiaryListResponseDto.MusicDto.builder()
@@ -250,7 +261,6 @@ public class DiaryService {
 					.artist(m.getArtist())
 					.build();
 			}
-
 			return DiaryListResponseDto.builder()
 				.diaryId(d.getDiaryId())
 				.type(d.getType())
@@ -261,74 +271,6 @@ public class DiaryService {
 				.build();
 		}).toList();
 	}
-
-	@Transactional(readOnly = true)
-	public List<DiaryListResponseDto> getCalendar(Authentication auth, Integer year, Integer month) {
-		final String userId = auth.getName();
-
-		// default 서울 기준으로 처리
-		ZoneId zone = ZoneId.of("Asia/Seoul");
-		ZonedDateTime nowKst = ZonedDateTime.now(zone);
-		int y = (year == null || year < 1) ? nowKst.getYear()  : year;
-		int m = (month == null || month < 1 || month > 12) ? nowKst.getMonthValue() : month;
-
-		LocalDate first = LocalDate.of(y, m, 1);
-		LocalDateTime from = first.atStartOfDay();             // 포함
-		LocalDateTime to   = first.plusMonths(1).atStartOfDay(); // 미포함
-
-		// 다이어리 조회 (오래된순)
-		List<Diary> diaries = diaryRepository
-			.findByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAsc(
-				userId, from, to
-			);
-
-		// 색상 일괄 로딩
-		List<Long> diaryIds = diaries.stream().map(Diary::getDiaryId).toList();
-		Map<Long, List<String>> colorMap = diaryIds.isEmpty()
-			? Map.of()
-			: diaryColorRepository.findByDiaryIdInOrderByDiaryIdAscColorIdAsc(diaryIds).stream()
-			.collect(Collectors.groupingBy(
-				DiaryColor::getDiaryId,
-				LinkedHashMap::new,
-				Collectors.mapping(DiaryColor::getColorName, Collectors.toList())
-			));
-
-		//음악 일괄 로딩
-		List<Long> musicIds = diaries.stream()
-			.map(Diary::getRecommandMusic)
-			.filter(id -> id != null)
-			.distinct()
-			.toList();
-
-		Map<Long, Music> musicMap = musicIds.isEmpty()
-			? Map.of()
-			: musicRepository.findByIdIn(musicIds).stream()
-			.collect(Collectors.toMap(Music::getId, m2 -> m2));
-
-		return diaries.stream().map(d -> {
-			Music music = (d.getRecommandMusic() != null) ? musicMap.get(d.getRecommandMusic()) : null;
-
-			DiaryListResponseDto.MusicDto musicDto = null;
-			if (music != null) {
-				musicDto = DiaryListResponseDto.MusicDto.builder()
-					.title(music.getTitle())
-					.artist(music.getArtist())
-					.build();
-			}
-
-			// 응답 DTO 매핑
-			return DiaryListResponseDto.builder()
-				.diaryId(d.getDiaryId())
-				.type(d.getType())
-				.summary(d.getSummary())
-				.createdAt(KstTime.toOffset(d.getCreatedAt()))
-				.colors(colorMap.getOrDefault(d.getDiaryId(), List.of()))
-				.music(musicDto)
-				.build();
-		}).toList();
-
-	}
-
 
 	@Transactional(readOnly = true)
 	public DiaryDetailResponseDto getDetail(Authentication auth, Long diaryId) {
