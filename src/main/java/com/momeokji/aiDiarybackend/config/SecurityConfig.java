@@ -44,7 +44,7 @@ import lombok.extern.slf4j.Slf4j;
  * <ol>
  *   <li>Swagger: 기존 그대로(HTTP Basic)</li>
  *   <li>관리자 {@code /admin/**}: 관리자 키 디코더. 가입/로그인만 공개, 나머지는 ADMIN 또는 SUPER_ADMIN</li>
- *   <li>앱(나머지 전부): 앱 키 디코더. 소셜 로그인/refresh/health/error 만 공개, 나머지는 USER</li>
+ *   <li>앱(나머지 전부): 앱 키 디코더. 소셜 로그인/refresh/health/min-version/error 만 공개, 나머지는 USER</li>
  * </ol>
  *
  * <p>두 체인의 서명 키가 다르므로 관리자 토큰으로 앱 API 를, 앱 토큰으로 관리자 API 를 부를 수 없다.
@@ -151,6 +151,7 @@ public class SecurityConfig {
 			matcher(HttpMethod.POST, "/auth/social/**"),
 			matcher(HttpMethod.POST, "/auth/refresh"),
 			matcher(HttpMethod.GET, "/health"),
+			matcher(HttpMethod.GET, "/app/min-version"),
 			matcher(null, "/error"),
 			matcher(null, "/error/**")
 		};

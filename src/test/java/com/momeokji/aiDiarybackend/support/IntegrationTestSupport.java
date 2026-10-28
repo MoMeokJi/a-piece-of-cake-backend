@@ -1,5 +1,6 @@
 package com.momeokji.aiDiarybackend.support;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -10,6 +11,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -17,6 +19,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.momeokji.aiDiarybackend.entity.Admin;
+import com.momeokji.aiDiarybackend.repository.AdminRepository;
 import com.momeokji.aiDiarybackend.service.RedisService;
 import com.momeokji.aiDiarybackend.service.push.FcmSender;
 
@@ -41,6 +45,12 @@ public abstract class IntegrationTestSupport {
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
+	@Autowired
+	private AdminRepository adminRepository;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+
 	@MockitoBean
 	protected RedisService redisService;
 
@@ -62,6 +72,21 @@ public abstract class IntegrationTestSupport {
 		String body = mockMvc.perform(MockMvcRequestBuilders.post("/auth/social/google")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(req)))
+			.andExpect(MockMvcResultMatchers.status().isOk())
+			.andReturn().getResponse().getContentAsString();
+		return objectMapper.readTree(body).get("accessToken").asText();
+	}
+
+	/** 승인된 일반 관리자 하나를 만들고(없으면) 로그인해 관리자 access 토큰을 돌려준다. */
+	protected String loginAsAdmin() throws Exception {
+		if (adminRepository.findByAdminId("admin-test").isEmpty()) {
+			adminRepository.save(Admin.builder()
+				.adminId("admin-test").adminPwd(passwordEncoder.encode("pw-admin")).createdAt(LocalDateTime.now())
+				.isValid(true).isSuper(false).build());
+		}
+		String body = mockMvc.perform(MockMvcRequestBuilders.post("/admin/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of("adminId", "admin-test", "adminPwd", "pw-admin"))))
 			.andExpect(MockMvcResultMatchers.status().isOk())
 			.andReturn().getResponse().getContentAsString();
 		return objectMapper.readTree(body).get("accessToken").asText();
