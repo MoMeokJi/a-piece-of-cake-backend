@@ -3,7 +3,7 @@ package com.momeokji.aiDiarybackend.dto.response;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Getter
@@ -11,7 +11,7 @@ import java.util.List;
 public class DiaryConfirmResponseDto {
 	private final Long diaryId;
 	private final String content;
-	private final LocalDateTime createdAt;
+	private final OffsetDateTime createdAt; // KST, +09:00
 	private final String summary;
 	private final List<String> images;
 	private final List<String> colors;

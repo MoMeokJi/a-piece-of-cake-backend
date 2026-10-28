@@ -1,16 +1,20 @@
 package com.momeokji.aiDiarybackend.support;
 
 import java.util.List;
+import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.momeokji.aiDiarybackend.service.RedisService;
@@ -45,6 +49,23 @@ public abstract class IntegrationTestSupport {
 
 	@Autowired
 	protected FakeAppleAuthClient fakeAppleAuthClient;
+
+	/** 테스트 전용 기기 ID. 회원마다 다른 기기가 필요하면 각 테스트가 직접 만든다. */
+	protected static final String TEST_DEVICE_ID = "11111111-1111-1111-1111-111111111111";
+
+	/** 구글 소셜 로그인으로 회원을 만들고(이미 있으면 로그인) access 토큰을 돌려준다. */
+	protected String loginAsMember(String sub) throws Exception {
+		Map<String, Object> req = Map.of(
+			"idToken", TestSocialTokens.google(sub, "ios-client", sub + "@gmail.com"),
+			"deviceId", TEST_DEVICE_ID,
+			"os", "IOS");
+		String body = mockMvc.perform(MockMvcRequestBuilders.post("/auth/social/google")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(req)))
+			.andExpect(MockMvcResultMatchers.status().isOk())
+			.andReturn().getResponse().getContentAsString();
+		return objectMapper.readTree(body).get("accessToken").asText();
+	}
 
 	@AfterEach
 	void cleanDatabase() {

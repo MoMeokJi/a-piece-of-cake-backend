@@ -1,6 +1,6 @@
 package com.momeokji.aiDiarybackend.dto.response;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import lombok.Builder;
 import lombok.Getter;
@@ -10,7 +10,7 @@ import lombok.Getter;
 public class DiaryListResponseDto {
 	private Long diaryId;
 	private String summary;
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt; // KST, +09:00
 	private List<String> colors;
 	private MusicDto music;
 

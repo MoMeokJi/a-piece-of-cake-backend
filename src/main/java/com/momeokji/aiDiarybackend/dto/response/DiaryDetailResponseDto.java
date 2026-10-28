@@ -1,6 +1,6 @@
 package com.momeokji.aiDiarybackend.dto.response;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 import lombok.Builder;
@@ -11,7 +11,7 @@ import lombok.Getter;
 public class DiaryDetailResponseDto {
 	private Long diaryId;
 	private String content;
-	private LocalDateTime createdAt;
+	private OffsetDateTime createdAt; // KST, +09:00
 
 	private List<String> images;   // 일단 null
 	private List<String> colors;   // HEX 코드

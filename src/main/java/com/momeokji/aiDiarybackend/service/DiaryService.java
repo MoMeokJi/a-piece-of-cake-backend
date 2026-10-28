@@ -1,5 +1,6 @@
 package com.momeokji.aiDiarybackend.service;
 
+import com.momeokji.aiDiarybackend.common.time.KstTime;
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
@@ -185,7 +186,7 @@ public class DiaryService {
 		return DiaryConfirmResponseDto.builder()
 			.diaryId(diary.getDiaryId())
 			.content(diary.getContent())
-			.createdAt(diary.getCreatedAt())
+			.createdAt(KstTime.toOffset(diary.getCreatedAt()))
 			.summary(summary)
 			.images(imageUrls)
 			.colors(colors)
@@ -246,7 +247,7 @@ public class DiaryService {
 			return DiaryListResponseDto.builder()
 				.diaryId(d.getDiaryId())
 				.summary(d.getSummary())
-				.createdAt(d.getCreatedAt())
+				.createdAt(KstTime.toOffset(d.getCreatedAt()))
 				.colors(colorMap.getOrDefault(d.getDiaryId(), List.of()))
 				.music(musicDto)
 				.build();
@@ -311,7 +312,7 @@ public class DiaryService {
 			return DiaryListResponseDto.builder()
 				.diaryId(d.getDiaryId())
 				.summary(d.getSummary())
-				.createdAt(d.getCreatedAt())
+				.createdAt(KstTime.toOffset(d.getCreatedAt()))
 				.colors(colorMap.getOrDefault(d.getDiaryId(), List.of()))
 				.music(musicDto)
 				.build();
@@ -358,7 +359,7 @@ public class DiaryService {
 		return DiaryDetailResponseDto.builder()
 			.diaryId(diary.getDiaryId())
 			.content(diary.getContent())
-			.createdAt(diary.getCreatedAt())
+			.createdAt(KstTime.toOffset(diary.getCreatedAt()))
 			.images(images)
 			.colors(colors)
 			.music(musicDto)
