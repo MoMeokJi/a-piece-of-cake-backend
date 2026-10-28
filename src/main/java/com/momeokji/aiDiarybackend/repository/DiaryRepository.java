@@ -25,6 +25,20 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
 
 	long countByIsValidTrue();
 
+	long countByUserIdAndIsValidTrue(String userId);
+
+	long countByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(String userId, LocalDateTime fromInclusive, LocalDateTime toExclusive);
+
+	/** 기록이 있는 날짜(최신순, 중복 없음). 연속 일수 계산용. 회원당 하루 최대 몇 개라 행 수가 작다. */
+	@Query(value = """
+		SELECT DISTINCT DATE(d.created_at) AS diary_date
+		  FROM diary d
+		 WHERE d.user_id = :userId
+		   AND d.is_valid = 1
+		 ORDER BY diary_date DESC
+		""", nativeQuery = true)
+	List<Object> findDistinctDiaryDates(@Param("userId") String userId);
+
 	@Modifying
 	@Query("""
       update Diary d

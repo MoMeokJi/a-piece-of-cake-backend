@@ -63,11 +63,13 @@ public class DiaryService {
 	private final MusicService musicService;
 	private final DiaryImageRepository diaryImageRepository;
 	private final DiaryImageService diaryImageService;
+	private final DiaryStatsService diaryStatsService;
 
 	@Transactional(readOnly = true)
 	public DiaryGenerateResponseDto generate(Authentication auth, DiaryGenerateRequestDto req) {
 		final String userId = auth.getName();
 		log.info("일기생성, userId={}", userId);
+		diaryStatsService.assertUnderDailyLimit(userId);
 
 		// Redis에서 reference_sets 조회
 		List<ReferenceSet> refsets = redisService.getAllRefSets(userId);
@@ -107,6 +109,7 @@ public class DiaryService {
 	private DiaryConfirmResponseDto doConfirm(Authentication auth, String text, List<MultipartFile> imageFiles, DiaryType type) {
 		final boolean updateRedis = type == DiaryType.QNA;
 		final String userId = auth.getName();
+		diaryStatsService.assertUnderDailyLimit(userId);
 		String summary;
 
 		if(text==null){
