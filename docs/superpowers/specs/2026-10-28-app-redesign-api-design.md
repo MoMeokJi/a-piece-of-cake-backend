@@ -36,6 +36,7 @@
 - `ClockConfig`의 `Clock`을 `Clock.system(ZoneId.of("Asia/Seoul"))`로 바꾼다. 날짜 경계를 쓰는 서비스는 이 `Clock`으로 "오늘"을 구한다.
 - `spring.jackson.time-zone=Asia/Seoul`을 `application.properties`에 둔다.
 - 일기 응답의 `createdAt`은 `OffsetDateTime`으로 내려 `2025-09-16T21:12:00+09:00` 형식이 된다. 변환은 `LocalDateTime.atZone(KST).toOffsetDateTime()`이다. 대상 DTO: `DiaryConfirmResponseDto`, `DiaryDetailResponseDto`, `DiaryListResponseDto`.
+- 일기 `createdAt`은 `@CreationTimestamp`가 아니라 서비스가 `Clock` 빈으로 넣는다. 통계·일일 제한·캘린더와 같은 시계를 쓰기 위해서다(구현 중 결정).
 - DB 컬럼은 그대로 `DATETIME`(KST 벽시계 시각)이다. 운영 JDBC URL의 `serverTimezone=Asia/Seoul`이 유지되어야 한다. **운영 JVM과 JDBC URL 타임존 확인은 사람이 한다.**
 
 ### 1. 일기 타입
@@ -93,6 +94,7 @@
 ### 9. 색상 이름
 - `diary_color.name VARCHAR(30) NULL`. 엔티티 필드 `name`. 기존 `color_name`(hex) 컬럼과 필드는 이름을 바꾸지 않는다(validate 호환).
 - 응답의 `colors`가 `[{ "name": "새싹 연두", "hex": "#C3E9A6" }]` 형태가 된다. 대상: `DiaryConfirmResponseDto`, `DiaryDetailResponseDto`, `DiaryListResponseDto`. `name`은 null일 수 있다.
+- 색 이름은 코드포인트 기준 30자로 잘라 저장한다. LLM 응답 길이를 보장할 수 없고, 안 자르면 확정 전체가 실패하기 때문이다(구현 중 결정).
 - `DiaryColorService.parseColors`는 다음 셋을 모두 받는다. 코드펜스는 먼저 벗긴다.
   1. `{"colors":[{"name":"새싹 연두","hex":"#C3E9A6"}, ...]}` → name, hex
   2. `{"colors":"#AABBCC, #DDEEFF"}` → name null
@@ -172,7 +174,7 @@ CREATE TABLE app_version (...);
 ## 6. 테스트
 
 - 통합 테스트(H2, MockMvc)로 각 엔드포인트의 응답 형식과 에러 코드를 확인한다. 기존 `IntegrationTestSupport`를 쓴다. OpenAI·S3는 mock 한다.
-- 날짜 경계 테스트는 `Clock`을 고정해 자정 전후를 검증한다. 일기 `createdAt`은 `@CreationTimestamp`라 테스트에서 직접 넣어야 하므로 `Diary.builder().createdAt(...)`로 저장한다.
+- 날짜 경계 테스트는 `Clock`을 고정해(실제보다 10일 뒤) 자정 flaky 없이 검증하고, 서비스가 주입된 `Clock`을 쓰는지도 드러낸다. 일기는 `Diary.builder().createdAt(...)`로 원하는 시각에 심는다.
 - `DiaryColorService` 파서는 세 가지 입력 형식 단위 테스트.
 - 스케줄러는 기존 방식대로 mock 기반 단위 테스트.
 
