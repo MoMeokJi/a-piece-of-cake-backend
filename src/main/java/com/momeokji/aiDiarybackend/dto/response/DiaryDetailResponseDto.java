@@ -26,6 +26,7 @@ public class DiaryDetailResponseDto {
 	public static class MusicDto {
 		private String title;
 		private String artist;
+		private Integer durationSeconds;
 		private String videoId;
 	}
 }

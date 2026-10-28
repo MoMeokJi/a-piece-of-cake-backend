@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.DiaryType;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
+import com.momeokji.aiDiarybackend.repository.MusicRepository;
 import com.momeokji.aiDiarybackend.service.DiaryImageService;
 import com.momeokji.aiDiarybackend.service.OpenAiService;
 
@@ -33,6 +34,9 @@ public abstract class DiaryTestSupport extends IntegrationTestSupport {
 	protected DiaryRepository diaryRepository;
 
 	@Autowired
+	protected MusicRepository musicRepository;
+
+	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
 	/** 토큰의 회원 ID. {@code GET /users/me} 로 읽는다. */
@@ -48,9 +52,14 @@ public abstract class DiaryTestSupport extends IntegrationTestSupport {
 	}
 
 	protected Diary insertDiary(String memberId, LocalDateTime createdAt, DiaryType type) {
+		return insertDiary(memberId, createdAt, type, null);
+	}
+
+	protected Diary insertDiary(String memberId, LocalDateTime createdAt, DiaryType type, Long musicId) {
 		Diary saved = diaryRepository.save(Diary.builder()
 			.userId(memberId)
 			.type(type)
+			.recommandMusic(musicId)
 			.content("본문")
 			.summary("요약")
 			.build());

@@ -21,5 +21,6 @@ public class DiaryListResponseDto {
 	public static class MusicDto {
 		private String title;
 		private String artist;
+		private Integer durationSeconds;
 	}
 }

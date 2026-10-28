@@ -1,6 +1,7 @@
 package com.momeokji.aiDiarybackend.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,4 +22,8 @@ public class MusicCreateRequest {
 
 	@NotBlank(message = "mood는 필수입니다.")
 	private String mood;
+
+	/** 재생 시간(초). 선택. */
+	@Positive(message = "durationSeconds는 1 이상이어야 합니다.")
+	private Integer durationSeconds;
 }

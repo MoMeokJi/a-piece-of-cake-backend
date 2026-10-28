@@ -188,6 +188,7 @@ public class DiaryService {
 			musicDto = DiaryConfirmResponseDto.MusicDto.builder()
 				.title(picked.getTitle())
 				.artist(picked.getArtist())
+					.durationSeconds(picked.getDurationSeconds())
 				.videoId(picked.getVideoId())
 				.build();
 		}
@@ -264,6 +265,7 @@ public class DiaryService {
 				musicDto = DiaryListResponseDto.MusicDto.builder()
 					.title(m.getTitle())
 					.artist(m.getArtist())
+					.durationSeconds(m.getDurationSeconds())
 					.build();
 			}
 			return DiaryListResponseDto.builder()
@@ -304,6 +306,7 @@ public class DiaryService {
 				.map(m -> DiaryDetailResponseDto.MusicDto.builder()
 					.title(m.getTitle())
 					.artist(m.getArtist())
+					.durationSeconds(m.getDurationSeconds())
 					.videoId(m.getVideoId())
 					.build()
 				)

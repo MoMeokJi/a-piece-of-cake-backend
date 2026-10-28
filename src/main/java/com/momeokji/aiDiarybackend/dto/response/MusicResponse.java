@@ -13,6 +13,7 @@ public class MusicResponse {
 	private String title;
 	private String artist;
 	private String mood;
+	private Integer durationSeconds;
 
 	public static MusicResponse from(Music music) {
 		return MusicResponse.builder()
@@ -21,6 +22,7 @@ public class MusicResponse {
 			.title(music.getTitle())
 			.artist(music.getArtist())
 			.mood(music.getMood())
+			.durationSeconds(music.getDurationSeconds())
 			.build();
 	}
 }

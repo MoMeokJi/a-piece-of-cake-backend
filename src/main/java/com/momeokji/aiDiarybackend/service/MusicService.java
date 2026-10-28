@@ -70,6 +70,7 @@ public class MusicService {
             .title(request.getTitle().trim())
             .artist(request.getArtist().trim())
             .mood(request.getMood().trim())
+            .durationSeconds(request.getDurationSeconds())
             .build();
 
         Music savedMusic = musicRepository.save(music);
@@ -109,6 +110,10 @@ public class MusicService {
             music.setMood(
                 requireText(request.getMood(), "mood")
             );
+        }
+
+        if (request.getDurationSeconds() != null) {
+            music.setDurationSeconds(request.getDurationSeconds());
         }
 
         // JPA 변경 감지로 UPDATE가 실행되므로 save()는 필요하지 않다.
@@ -161,7 +166,8 @@ public class MusicService {
             request.getVideoId() != null
                 || request.getTitle() != null
                 || request.getArtist() != null
-                || request.getMood() != null;
+                || request.getMood() != null
+                || request.getDurationSeconds() != null;
 
         if (!hasUpdateField) {
             throw new ResponseStatusException(

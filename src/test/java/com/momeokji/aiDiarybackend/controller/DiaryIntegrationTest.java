@@ -19,6 +19,8 @@ import org.springframework.mock.web.MockPart;
 import org.springframework.test.web.servlet.ResultActions;
 
 import com.momeokji.aiDiarybackend.entity.Diary;
+import com.momeokji.aiDiarybackend.entity.DiaryType;
+import com.momeokji.aiDiarybackend.entity.Music;
 import com.momeokji.aiDiarybackend.support.DiaryTestSupport;
 
 /** 일기 API: 응답 형식(타임존, 타입, 색상, 음악), 정렬·페이지, 에러 코드. */
@@ -174,6 +176,18 @@ class DiaryIntegrationTest extends DiaryTestSupport {
 			.andExpect(jsonPath("$.colors[1].hex").value("#FFFFFF"));
 		mockMvc.perform(get("/diaries").header(AUTHORIZATION, "Bearer " + token))
 			.andExpect(jsonPath("$.items[0].colors[0].name").value("새싹 연두"));
+	}
+
+	@Test
+	void detailAndListMusicHaveDurationSeconds() throws Exception {
+		String token = loginAsMember("sub-1");
+		Music music = musicRepository.save(Music.builder().videoId("vid").title("제목").artist("가수").mood("calm").durationSeconds(182).build());
+		Diary d = insertDiary(memberIdOf(token), LocalDateTime.of(2025, 9, 16, 21, 12), DiaryType.FREE, music.getId());
+
+		mockMvc.perform(get("/diaries/" + d.getDiaryId()).header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.music.durationSeconds").value(182));
+		mockMvc.perform(get("/diaries").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.items[0].music.durationSeconds").value(182));
 	}
 
 	// ---- helpers ----

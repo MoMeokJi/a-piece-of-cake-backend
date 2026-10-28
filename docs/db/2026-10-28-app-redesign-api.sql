@@ -11,3 +11,6 @@ ALTER TABLE diary ADD COLUMN type VARCHAR(10) NOT NULL DEFAULT 'FREE';
 
 -- 9. 색상 이름. color_name 컬럼은 hex 를 담고 있으며 이름을 바꾸지 않는다. 프롬프트가 이름을 주기 전 일기는 NULL.
 ALTER TABLE diary_color ADD COLUMN name VARCHAR(30) NULL;
+
+-- 10. 음악 재생 시간(초). 기존 행은 scripts/backfill-music-duration.sh 로 채운다.
+ALTER TABLE music ADD COLUMN duration_seconds INT NULL;
