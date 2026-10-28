@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.momeokji.aiDiarybackend.entity.Diary;
@@ -36,9 +35,6 @@ public abstract class DiaryTestSupport extends IntegrationTestSupport {
 	@Autowired
 	protected MusicRepository musicRepository;
 
-	@Autowired
-	private JdbcTemplate jdbcTemplate;
-
 	/** 토큰의 회원 ID. {@code GET /users/me} 로 읽는다. */
 	protected String memberIdOf(String token) throws Exception {
 		String body = mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -46,7 +42,7 @@ public abstract class DiaryTestSupport extends IntegrationTestSupport {
 		return objectMapper.readTree(body).get("memberId").asText();
 	}
 
-	/** {@code @CreationTimestamp} 가 저장 시각을 항상 덮어쓰므로, 저장 뒤 SQL 로 원하는 시각을 넣고 다시 읽는다. */
+	/** 원하는 {@code createdAt} 으로 일기를 심는다. 서비스가 시각을 직접 넣는 구조라 빌더로 바로 저장된다. */
 	protected Diary insertDiary(String memberId, LocalDateTime createdAt) {
 		return insertDiary(memberId, createdAt, DiaryType.FREE);
 	}
@@ -56,15 +52,14 @@ public abstract class DiaryTestSupport extends IntegrationTestSupport {
 	}
 
 	protected Diary insertDiary(String memberId, LocalDateTime createdAt, DiaryType type, Long musicId) {
-		Diary saved = diaryRepository.save(Diary.builder()
+		return diaryRepository.save(Diary.builder()
 			.userId(memberId)
 			.type(type)
 			.recommandMusic(musicId)
+			.createdAt(createdAt)
 			.content("본문")
 			.summary("요약")
 			.build());
-		jdbcTemplate.update("UPDATE diary SET created_at = ? WHERE diary_id = ?", createdAt, saved.getDiaryId());
-		return diaryRepository.findById(saved.getDiaryId()).orElseThrow();
 	}
 
 	/** 일기 생성·확정 경로가 부르는 OpenAI 프롬프트의 기본 응답. 색상은 아직 구형(문자열) 형식이다. */

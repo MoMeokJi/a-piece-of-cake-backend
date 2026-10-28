@@ -38,6 +38,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -64,6 +65,7 @@ public class DiaryService {
 	private final DiaryImageRepository diaryImageRepository;
 	private final DiaryImageService diaryImageService;
 	private final DiaryStatsService diaryStatsService;
+	private final Clock clock;
 
 	@Transactional(readOnly = true)
 	public DiaryGenerateResponseDto generate(Authentication auth, DiaryGenerateRequestDto req) {
@@ -143,6 +145,7 @@ public class DiaryService {
 			Diary.builder()
 				.userId(member.getMemberId())
 				.type(type)
+				.createdAt(LocalDateTime.now(clock))
 				.content(text)
 				.summary(summary)
 				.recommandMusic(musicId)
@@ -226,7 +229,7 @@ public class DiaryService {
 	public List<DiaryListResponseDto> getCalendar(Authentication auth, Integer year, Integer month, String sort) {
 		final String userId = auth.getName();
 
-		LocalDate today = LocalDate.now(KstTime.ZONE);
+		LocalDate today = LocalDate.now(clock);
 		int y = (year == null || year < 1) ? today.getYear()  : year;
 		int m = (month == null || month < 1 || month > 12) ? today.getMonthValue() : month;
 

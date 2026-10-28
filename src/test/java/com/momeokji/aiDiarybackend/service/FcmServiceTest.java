@@ -103,8 +103,8 @@ class FcmServiceTest {
 		// DiarySympathyScheduler 는 한 트랜잭션에서 일기를 순회하며 feedbackMsg 를 더티체킹으로 저장하고 푸시를 보낸다.
 		// 중간에 무효 토큰 정리가 일어나도 그 뒤 일기의 변경이 커밋되어야 한다.
 		device("dev-a", "m1", "AND", "fcm-A");
-		Diary first = diaryRepository.save(Diary.builder().userId("m1").content("1").build());
-		Diary second = diaryRepository.save(Diary.builder().userId("m1").content("2").build());
+		Diary first = diaryRepository.save(Diary.builder().userId("m1").content("1").createdAt(NOW).build());
+		Diary second = diaryRepository.save(Diary.builder().userId("m1").content("2").createdAt(NOW).build());
 		em.flush();
 		FirebaseMessagingException unregistered = mock(FirebaseMessagingException.class);
 		when(unregistered.getMessagingErrorCode()).thenReturn(MessagingErrorCode.UNREGISTERED);

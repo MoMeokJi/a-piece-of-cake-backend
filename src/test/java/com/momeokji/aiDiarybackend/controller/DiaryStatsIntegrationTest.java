@@ -12,10 +12,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockPart;
 import org.springframework.test.web.servlet.ResultActions;
@@ -24,10 +32,34 @@ import com.momeokji.aiDiarybackend.common.time.KstTime;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.support.DiaryTestSupport;
 
-/** {@code GET /users/me/stats} 와 하루 3개 작성 제한. 날짜는 KST 오늘 기준 상대값으로 만든다. */
+/**
+ * {@code GET /users/me/stats} 와 하루 3개 작성 제한.
+ *
+ * <p>서버 시계를 실제보다 10일 뒤로 고정한다. "오늘" 이 테스트 중에 바뀌지 않고(자정 경계 flaky 방지),
+ * 서비스가 시스템 시계 대신 주입된 {@code Clock} 을 쓰는지도 드러난다. 토큰은 고정 시각 기준으로
+ * 발급되어 exp 가 미래이므로 검증을 통과한다.
+ */
+@Import(DiaryStatsIntegrationTest.FixedClockConfig.class)
 class DiaryStatsIntegrationTest extends DiaryTestSupport {
 
-	final LocalDate today = LocalDate.now(KstTime.ZONE);
+	@TestConfiguration
+	static class FixedClockConfig {
+		@Bean
+		@Primary
+		Clock fixedClock() {
+			return Clock.fixed(Instant.now().plus(Duration.ofDays(10)), KstTime.ZONE);
+		}
+	}
+
+	@Autowired
+	Clock clock;
+
+	LocalDate today;
+
+	@org.junit.jupiter.api.BeforeEach
+	void todayFromInjectedClock() {
+		today = LocalDate.now(clock);
+	}
 
 	@Test
 	void statsCountTotalMonthToday() throws Exception {
@@ -132,6 +164,17 @@ class DiaryStatsIntegrationTest extends DiaryTestSupport {
 
 		confirmFree(token).andExpect(status().isCreated());
 		stats(token).andExpect(jsonPath("$.todayCount").value(3));
+	}
+
+	/** 캘린더의 "이번 달" 기본값도 주입된 Clock 을 따른다. 시스템 시계를 쓰면 10일 뒤 달의 일기가 보이지 않는다. */
+	@Test
+	void calendarDefaultMonthFollowsInjectedClock() throws Exception {
+		String token = loginAsMember("sub-1");
+		insertDiary(memberIdOf(token), today.atTime(9, 0));
+
+		mockMvc.perform(get("/diaries/calendar").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.length()").value(1));
 	}
 
 	// ---- helpers ----

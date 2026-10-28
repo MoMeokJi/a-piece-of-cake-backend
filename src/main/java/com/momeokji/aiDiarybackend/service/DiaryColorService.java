@@ -28,6 +28,9 @@ public class DiaryColorService {
 	public record ColorPick(String name, String hex) {
 	}
 
+	/** {@code diary_color.name VARCHAR(30)}. LLM 이 주는 이름은 길이를 보장할 수 없으므로 여기서 자른다. */
+	static final int NAME_MAX_LENGTH = 30;
+
 	private static final Pattern HEX_PATTERN = Pattern.compile("#[0-9A-Fa-f]{6}");
 	private static final Pattern EXACT_HEX = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 	private final ObjectMapper mapper = new ObjectMapper();
@@ -71,10 +74,21 @@ public class DiaryColorService {
 			if (hex == null || !EXACT_HEX.matcher(hex.trim()).matches()) {
 				continue;
 			}
-			String name = node.path("name").asText(null);
-			picks.add(new ColorPick(name == null || name.isBlank() ? null : name.trim(), hex.trim().toUpperCase()));
+			picks.add(new ColorPick(normalizeName(node.path("name").asText(null)), hex.trim().toUpperCase()));
 		}
 		return picks;
+	}
+
+	/** 비어 있으면 null, 길면 코드포인트 기준 30자로 자른다(이모지가 반으로 갈리지 않게). */
+	private static String normalizeName(String raw) {
+		if (raw == null || raw.isBlank()) {
+			return null;
+		}
+		String name = raw.trim();
+		if (name.codePointCount(0, name.length()) <= NAME_MAX_LENGTH) {
+			return name;
+		}
+		return name.substring(0, name.offsetByCodePoints(0, NAME_MAX_LENGTH));
 	}
 
 	private static String stripCodeFence(String raw) {

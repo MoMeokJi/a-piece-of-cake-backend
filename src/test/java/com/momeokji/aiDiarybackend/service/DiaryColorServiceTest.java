@@ -46,4 +46,14 @@ class DiaryColorServiceTest {
 	void noHexThrows() {
 		assertThrows(IllegalStateException.class, () -> service.parseColors("없음"));
 	}
+
+	/** 이름은 LLM 이 주는 값이라 길이를 보장할 수 없다. DB 컬럼(30자)에 맞춰 잘라 저장 실패로 일기를 잃지 않게 한다. */
+	@Test
+	void longNameIsTruncatedToThirtyChars() {
+		String longName = "아주".repeat(20); // 40자
+		List<ColorPick> out = service.parseColors("{\"colors\":[{\"name\":\"" + longName + "\",\"hex\":\"#000000\"}]}");
+
+		assertEquals("아주".repeat(15), out.get(0).name());
+		assertEquals(30, out.get(0).name().length());
+	}
 }

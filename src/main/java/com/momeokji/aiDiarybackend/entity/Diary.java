@@ -3,7 +3,6 @@ package com.momeokji.aiDiarybackend.entity;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
 
 import jakarta.persistence.*;
@@ -38,7 +37,7 @@ public class Diary {
 	@Column(name = "type", nullable = false, length = 10)
 	private DiaryType type = DiaryType.FREE;
 
-	@CreationTimestamp
+	/** 저장 시각(KST 벽시계). 서비스가 {@code Clock} 빈으로 넣는다 — 통계·일일 제한과 같은 시계를 쓰기 위해서다. */
 	@Column(name = "created_at", updatable = false, nullable = false)
 	private LocalDateTime createdAt;
 
