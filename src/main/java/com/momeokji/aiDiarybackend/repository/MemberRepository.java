@@ -1,6 +1,7 @@
 package com.momeokji.aiDiarybackend.repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,6 +36,9 @@ public interface MemberRepository extends JpaRepository<Member,String> {
 
 	/** 리마인드 대상: 유효하고 기록 알림을 켠 회원. */
 	List<Member> findByIsValidTrueAndNotificationEnabledTrue();
+
+	/** 여러 회원을 한 번에. 공감 스케줄러가 일기마다 조회하지 않기 위해 쓴다. */
+	List<Member> findByMemberIdInAndIsValidTrue(Collection<String> memberIds);
 
 	@Query(
 		value = """

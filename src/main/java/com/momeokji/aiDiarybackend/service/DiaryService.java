@@ -194,7 +194,7 @@ public class DiaryService {
 			musicDto = DiaryConfirmResponseDto.MusicDto.builder()
 				.title(picked.getTitle())
 				.artist(picked.getArtist())
-					.durationSeconds(picked.getDurationSeconds())
+				.durationSeconds(picked.getDurationSeconds())
 				.videoId(picked.getVideoId())
 				.build();
 		}

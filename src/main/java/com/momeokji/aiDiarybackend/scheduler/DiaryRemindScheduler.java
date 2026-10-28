@@ -1,7 +1,6 @@
 package com.momeokji.aiDiarybackend.scheduler;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -10,6 +9,7 @@ import java.util.Set;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.momeokji.aiDiarybackend.common.time.KstTime;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
@@ -37,8 +37,7 @@ public class DiaryRemindScheduler {
 
 	@Scheduled(cron = "0 0 22 * * *", zone = "Asia/Seoul")
 	public void sendRemindNotifications() {
-		ZoneId kst = ZoneId.of("Asia/Seoul");
-		LocalDate today = LocalDate.now(kst);
+		LocalDate today = LocalDate.now(KstTime.ZONE);
 
 		List<Member> members = memberRepository.findByIsValidTrueAndNotificationEnabledTrue();
 		// 회원마다 exists 쿼리를 날리는 대신 푸시 가능한 회원 ID 를 한 번에 읽어 거른다.
@@ -63,7 +62,7 @@ public class DiaryRemindScheduler {
 
 			Diary lastDiary = lastDiaryOpt.get();
 			LocalDate lastDate = lastDiary.getCreatedAt()
-				.atZone(kst)
+				.atZone(KstTime.ZONE)
 				.toLocalDate();
 
 			long days = ChronoUnit.DAYS.between(lastDate, today);

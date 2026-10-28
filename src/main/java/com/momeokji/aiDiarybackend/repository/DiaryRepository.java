@@ -29,15 +29,13 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
 
 	long countByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(String userId, LocalDateTime fromInclusive, LocalDateTime toExclusive);
 
-	/** 기록이 있는 날짜(최신순, 중복 없음). 연속 일수 계산용. 회원당 하루 최대 몇 개라 행 수가 작다. */
-	@Query(value = """
-		SELECT DISTINCT DATE(d.created_at) AS diary_date
-		  FROM diary d
-		 WHERE d.user_id = :userId
-		   AND d.is_valid = 1
-		 ORDER BY diary_date DESC
-		""", nativeQuery = true)
-	List<Object> findDistinctDiaryDates(@Param("userId") String userId);
+	/**
+	 * 유효한 일기의 저장 시각 전부. 연속 일수 계산용으로, 날짜 변환은 자바에서 한다.
+	 * 네이티브 {@code DATE()} 는 드라이버가 JVM 타임존으로 {@code java.sql.Date} 를 만들며 하루가 밀릴 수 있어 쓰지 않는다.
+	 * 회원당 하루 최대 몇 개라 행 수가 작다.
+	 */
+	@Query("select d.createdAt from Diary d where d.userId = :userId and d.isValid = true")
+	List<LocalDateTime> findCreatedAtsByUserId(@Param("userId") String userId);
 
 	@Modifying
 	@Query("""

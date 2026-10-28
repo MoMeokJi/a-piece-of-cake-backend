@@ -11,7 +11,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.momeokji.aiDiarybackend.support.IntegrationTestSupport;
 
 /** 스웨거 문서에 앱팀이 요청한 설명(에러 코드 표, 닉네임 규칙, 정렬 값)과 새 스키마가 실린다. */
-@TestPropertySource(properties = {"springdoc.api-docs.enabled=true", "springdoc.swagger-ui.enabled=true", "swagger.auth.enabled=false"})
+@TestPropertySource(properties = {"springdoc.api-docs.enabled=true", "springdoc.swagger-ui.enabled=true", "swagger.auth.enabled=false",
+	"diary.daily-limit=5"})
 class OpenApiDocsTest extends IntegrationTestSupport {
 
 	@Test
@@ -25,7 +26,9 @@ class OpenApiDocsTest extends IntegrationTestSupport {
 		assertThat(description)
 			.contains("DIARY_DAILY_LIMIT_EXCEEDED", "DIARY_NOT_FOUND", "TOKEN_EXPIRED", "TOKEN_INVALID", "REFRESH_INVALID")
 			.contains("+09:00")
-			.contains("recent", "oldest");
+			.contains("recent", "oldest")
+			.contains("5개") // diary.daily-limit 을 따른다
+			.contains("METHOD_NOT_ALLOWED", "NOT_FOUND");
 
 		assertThat(docs.at("/components/schemas/DiaryPageResponseDto").isMissingNode()).isFalse();
 		assertThat(docs.at("/components/schemas/MinVersionResponseDto").isMissingNode()).isFalse();
@@ -35,5 +38,9 @@ class OpenApiDocsTest extends IntegrationTestSupport {
 			.contains("^[가-힣A-Za-z0-9]{2,10}$");
 		assertThat(docs.at("/paths/~1diaries~1qna/post/description").asText())
 			.contains("빼고");
+		assertThat(docs.at("/paths/~1diaries/post/description").asText())
+			.contains("429", "QNA", "colors");
+		assertThat(docs.at("/paths/~1diaries~1free/post/description").asText())
+			.contains("429", "FREE");
 	}
 }

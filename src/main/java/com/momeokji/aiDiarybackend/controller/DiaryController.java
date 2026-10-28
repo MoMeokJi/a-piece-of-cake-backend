@@ -64,6 +64,11 @@ public class DiaryController {
 
 
 
+	@Operation(summary = "문답 일기 확정 (multipart)", description = """
+		`text`(필수)와 `images`(최대 4개, 선택)를 multipart 로 보낸다. `type` 은 `QNA` 로 저장된다.
+		응답의 `colors` 는 `[{name, hex}]` 객체 배열이며 `name` 은 null 일 수 있다. `createdAt` 은 `+09:00` 오프셋을 붙인다.
+		오늘(KST) 작성 개수가 제한에 도달했으면 OpenAI 호출 전에 429 `DIARY_DAILY_LIMIT_EXCEEDED` 를 돌려준다.
+		""")
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<DiaryConfirmResponseDto> confirm(
 		Authentication auth,
@@ -87,6 +92,10 @@ public class DiaryController {
 		return ResponseEntity.created(location).body(res); // 201 + Location + 본문
 	}
 
+	@Operation(summary = "자유 일기 저장 (multipart)", description = """
+		`text`(필수)와 `images`(최대 4개, 선택)를 multipart 로 보낸다. `type` 은 `FREE` 로 저장된다.
+		응답 형식은 문답 확정과 같다. 오늘(KST) 작성 개수가 제한에 도달했으면 429 `DIARY_DAILY_LIMIT_EXCEEDED`.
+		""")
 	@PostMapping(value = "/free", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<DiaryConfirmResponseDto> confirmFree(
 		Authentication auth,

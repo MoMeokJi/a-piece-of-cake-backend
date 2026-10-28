@@ -3,6 +3,8 @@ package com.momeokji.aiDiarybackend.scheduler;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class DiarySympathyScheduler {
 		}
 
 		log.info("공감알림 생성 대상 일기 수 = {}", diaries.size());
+		Set<String> pushTargets = notificationEnabledMembers(diaries);
 
 		for (Diary diary : diaries) {
 			if (diary.getFeedbackMsg() != null) {
@@ -58,7 +61,7 @@ public class DiarySympathyScheduler {
 				log.info("공감알림 생성 완료 diaryId={}", diary.getDiaryId());
 
 				// 발송 실패는 FcmService 가 로그로 처리하고 예외를 던지지 않는다
-				if (notificationEnabled(diary.getUserId())) {
+				if (pushTargets.contains(diary.getUserId())) {
 					fcmService.feedbackNotification(diary.getUserId(), diary.getDiaryId());
 				}
 
@@ -68,10 +71,12 @@ public class DiarySympathyScheduler {
 		}
 	}
 
-	private boolean notificationEnabled(String memberId) {
-		return memberRepository.findByMemberIdAndIsValidTrue(memberId)
-			.map(Member::getNotificationEnabled)
-			.map(Boolean.TRUE::equals)
-			.orElse(false);
+	/** 대상 일기의 회원을 한 번에 읽어, 유효하고 기록 알림을 켠 회원 ID 집합을 만든다. */
+	private Set<String> notificationEnabledMembers(List<Diary> diaries) {
+		Set<String> memberIds = diaries.stream().map(Diary::getUserId).collect(Collectors.toSet());
+		return memberRepository.findByMemberIdInAndIsValidTrue(memberIds).stream()
+			.filter(m -> Boolean.TRUE.equals(m.getNotificationEnabled()))
+			.map(Member::getMemberId)
+			.collect(Collectors.toSet());
 	}
 }

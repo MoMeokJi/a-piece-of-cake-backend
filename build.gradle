@@ -77,4 +77,6 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 테스트 JVM 을 일부러 UTC 로 띄운다. 운영 서버가 UTC 여도 애플리케이션이 KST 로 고정하는지 확인하기 위해서다.
+	systemProperty 'user.timezone', 'UTC'
 }

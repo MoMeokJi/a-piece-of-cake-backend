@@ -40,14 +40,15 @@ public class DiaryStatsService {
 		LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
 		LocalDateTime nextMonthStart = today.withDayOfMonth(1).plusMonths(1).atStartOfDay();
 
-		List<LocalDate> datesDesc = diaryRepository.findDistinctDiaryDates(memberId).stream()
-			.map(DiaryStatsService::toLocalDate)
+		List<LocalDate> dates = diaryRepository.findCreatedAtsByUserId(memberId).stream()
+			.map(LocalDateTime::toLocalDate)
+			.distinct()
 			.toList();
 
 		return DiaryStatsResponseDto.builder()
 			.totalCount(diaryRepository.countByUserIdAndIsValidTrue(memberId))
 			.monthCount(countBetween(memberId, monthStart, nextMonthStart))
-			.streakDays(streakDays(datesDesc, today))
+			.streakDays(streakDays(dates, today))
 			.todayCount(countToday(memberId, today))
 			.dailyLimit(dailyLimit)
 			.build();
@@ -64,10 +65,10 @@ public class DiaryStatsService {
 	/**
 	 * 연속 기록 일수. 오늘 기록이 있으면 오늘부터, 없으면 어제부터 거슬러 올라가며 하루라도 비면 멈춘다.
 	 *
-	 * @param datesDesc 기록이 있는 날짜(중복 없음, 최신순)
+	 * @param recordedDates 기록이 있는 날짜(순서 무관)
 	 */
-	static int streakDays(List<LocalDate> datesDesc, LocalDate today) {
-		Set<LocalDate> dates = new HashSet<>(datesDesc);
+	static int streakDays(List<LocalDate> recordedDates, LocalDate today) {
+		Set<LocalDate> dates = new HashSet<>(recordedDates);
 		LocalDate cursor = dates.contains(today) ? today : today.minusDays(1);
 		int streak = 0;
 		while (dates.contains(cursor)) {
@@ -84,16 +85,5 @@ public class DiaryStatsService {
 	private long countBetween(String memberId, LocalDateTime fromInclusive, LocalDateTime toExclusive) {
 		return diaryRepository.countByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
 			memberId, fromInclusive, toExclusive);
-	}
-
-	/** 네이티브 {@code DATE()} 결과는 드라이버에 따라 {@code java.sql.Date} 또는 {@code LocalDate} 로 온다. */
-	private static LocalDate toLocalDate(Object value) {
-		if (value instanceof LocalDate date) {
-			return date;
-		}
-		if (value instanceof java.sql.Date date) {
-			return date.toLocalDate();
-		}
-		return LocalDate.parse(value.toString());
 	}
 }

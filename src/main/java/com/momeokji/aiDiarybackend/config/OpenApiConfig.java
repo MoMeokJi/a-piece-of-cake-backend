@@ -1,5 +1,6 @@
 package com.momeokji.aiDiarybackend.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -23,6 +24,9 @@ public class OpenApiConfig {
 
 	private static final String ACCESS_TOKEN_SCHEME = "accessToken";
 
+	@Value("${diary.daily-limit:3}")
+	private int dailyLimit;
+
 	@Bean
 	public OpenAPI openAPI() {
 		Info info = new Info()
@@ -42,7 +46,7 @@ public class OpenApiConfig {
 				- 시각(`createdAt` 등)은 ISO 8601 에 KST 오프셋을 붙인 문자열입니다. 예: `2025-09-16T21:12:00+09:00`. \
 				  오늘·이번 달·연속 일수 같은 날짜 경계는 모두 KST 기준입니다.
 				- 목록 정렬 `sort` 는 `recent`(최신순, 기본) 또는 `oldest`(오래된순)입니다. `created` 는 `oldest` 의 별칭입니다.
-				- 하루(KST)에 쓸 수 있는 일기는 3개입니다(`GET /users/me/stats` 의 `dailyLimit`). 초과하면 429 입니다.
+				- 하루(KST)에 쓸 수 있는 일기는 %d개입니다(`GET /users/me/stats` 의 `dailyLimit`). 초과하면 429 입니다.
 
 				## 에러 응답
 
@@ -72,9 +76,12 @@ public class OpenApiConfig {
 				| 503 | `SOCIAL_PROVIDER_UNAVAILABLE` | 소셜 공급자 키 조회 실패 | 잠시 후 재시도 |
 				| 500 | `INTERNAL_ERROR` | 그 외 | 안내 |
 
+				위 표 밖의 Spring MVC 표준 오류(없는 경로 404 `NOT_FOUND`, 405 `METHOD_NOT_ALLOWED`, 415 `UNSUPPORTED_MEDIA_TYPE`,
+				본문 파싱 실패 400 `VALIDATION_FAILED` 등)는 HTTP 상태 이름이 그대로 `code` 가 됩니다. 앱은 이들을 일반 오류로 처리하면 됩니다.
+
 				`TOKEN_EXPIRED` 와 `TOKEN_INVALID` 는 서로 다른 코드입니다. 앱이 401 에 무조건 refresh 를 한 번 시도하는 방식도 \
 				동작하지만, `TOKEN_INVALID` 는 refresh 해도 같은 결과이므로 바로 로그아웃 처리하는 편이 빠릅니다.
-				""");
+				""".formatted(dailyLimit));
 
 		SecurityScheme accessToken = new SecurityScheme()
 			.type(SecurityScheme.Type.HTTP)

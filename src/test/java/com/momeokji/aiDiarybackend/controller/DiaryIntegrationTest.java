@@ -26,6 +26,12 @@ import com.momeokji.aiDiarybackend.support.DiaryTestSupport;
 /** 일기 API: 응답 형식(타임존, 타입, 색상, 음악), 정렬·페이지, 에러 코드. */
 class DiaryIntegrationTest extends DiaryTestSupport {
 
+	/** 테스트 JVM 은 build.gradle 이 UTC 로 띄운다. 애플리케이션 클래스의 static 블록이 KST 로 바꿔야 이 단언이 통과한다. */
+	@Test
+	void jvmDefaultZoneIsKstRegardlessOfHostTimezone() {
+		org.junit.jupiter.api.Assertions.assertEquals("Asia/Seoul", java.util.TimeZone.getDefault().getID());
+	}
+
 	@Test
 	void createdAtHasKstOffset() throws Exception {
 		String token = loginAsMember("sub-1");
