@@ -37,7 +37,43 @@ public class OpenApiConfig {
 				- 앱: 소셜 로그인(`POST /auth/social/google`, `POST /auth/social/apple`) 또는 `POST /auth/refresh` 응답의 `accessToken`
 				- 관리자: `POST /admin/auth/login` 응답의 `accessToken` (`/admin/**` 전용)
 
-				에러 응답은 RFC 9457 Problem Details 형식이며 `code` 필드로 분기합니다.
+				## 공통 규칙
+
+				- 시각(`createdAt` 등)은 ISO 8601 에 KST 오프셋을 붙인 문자열입니다. 예: `2025-09-16T21:12:00+09:00`. \
+				  오늘·이번 달·연속 일수 같은 날짜 경계는 모두 KST 기준입니다.
+				- 목록 정렬 `sort` 는 `recent`(최신순, 기본) 또는 `oldest`(오래된순)입니다. `created` 는 `oldest` 의 별칭입니다.
+				- 하루(KST)에 쓸 수 있는 일기는 3개입니다(`GET /users/me/stats` 의 `dailyLimit`). 초과하면 429 입니다.
+
+				## 에러 응답
+
+				RFC 9457 Problem Details 형식이며 클라이언트는 `code` 필드로만 분기합니다. `detail` 은 사람이 읽는 설명입니다.
+
+				```json
+				{ "type": "about:blank", "title": "Unauthorized", "status": 401, "detail": "access token이 만료되었습니다.", "instance": "/users/me", "code": "TOKEN_EXPIRED" }
+				```
+
+				| HTTP | code | 발생 조건 | 앱 권장 동작 |
+				|---|---|---|---|
+				| 401 | `UNAUTHORIZED` | 보호된 API 에 토큰 없음 | 로그인 화면 |
+				| 401 | `TOKEN_EXPIRED` | access 토큰 만료 (서명·발급자는 정상) | `POST /auth/refresh` 1회 후 원요청 재시도 |
+				| 401 | `TOKEN_INVALID` | access 토큰 서명·iss·aud 불일치, role 없음, 탈퇴한 회원 | 저장된 토큰 삭제 후 로그인 화면 |
+				| 401 | `REFRESH_INVALID` | refresh 토큰 없음·만료·deviceId 불일치 | 저장된 토큰 삭제 후 로그인 화면 |
+				| 401 | `REFRESH_REUSED` | refresh 토큰 재사용 감지로 세션 삭제 | `REFRESH_INVALID` 와 동일 |
+				| 401 | `SOCIAL_TOKEN_INVALID` | 소셜 토큰 검증 실패, nonce 불일치 | 로그인 실패 안내 |
+				| 401 | `ADMIN_LOGIN_FAILED` | 관리자 아이디 또는 비밀번호 틀림 | 안내 |
+				| 403 | `FORBIDDEN` | 권한 부족 | 안내 |
+				| 403 | `ADMIN_NOT_APPROVED` | 승인 대기 관리자 | 안내 |
+				| 400 | `VALIDATION_FAILED` | 요청 값 형식 오류 (닉네임 규칙 위반 포함) | 입력 안내 |
+				| 400 | `BAD_REQUEST` | 그 외 잘못된 요청 (허용되지 않는 `sort` 값 등) | 안내 |
+				| 404 | `DIARY_NOT_FOUND` | 내 일기가 아니거나 없거나 삭제됨 | 목록으로 |
+				| 404 | `DEVICE_NOT_FOUND` | 내 소유가 아닌 기기의 FCM 갱신 | 다시 로그인 |
+				| 404 | `MEMBER_NOT_FOUND` | 회원 없음 (방어용) | 로그인 화면 |
+				| 429 | `DIARY_DAILY_LIMIT_EXCEEDED` | 오늘(KST) 작성 개수가 제한에 도달 | 작성 불가 안내 |
+				| 503 | `SOCIAL_PROVIDER_UNAVAILABLE` | 소셜 공급자 키 조회 실패 | 잠시 후 재시도 |
+				| 500 | `INTERNAL_ERROR` | 그 외 | 안내 |
+
+				`TOKEN_EXPIRED` 와 `TOKEN_INVALID` 는 서로 다른 코드입니다. 앱이 401 에 무조건 refresh 를 한 번 시도하는 방식도 \
+				동작하지만, `TOKEN_INVALID` 는 refresh 해도 같은 결과이므로 바로 로그아웃 처리하는 편이 빠릅니다.
 				""");
 
 		SecurityScheme accessToken = new SecurityScheme()

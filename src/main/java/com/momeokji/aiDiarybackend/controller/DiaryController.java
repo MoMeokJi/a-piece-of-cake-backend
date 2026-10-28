@@ -33,6 +33,7 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.service.DiaryService;
 import com.momeokji.aiDiarybackend.service.QuestionService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -46,6 +47,11 @@ public class DiaryController {
 	private final QuestionService questionService;
 	private final ObjectMapper objectMapper;
 
+	@Operation(summary = "문답으로 일기 생성", description = """
+		`target_set` 의 각 항목은 `question`, `answer` 모두 필수(빈 문자열 불가)다.
+		답하지 않은 문항은 **빼고** 보낸다. 전부 건너뛰었으면 앱이 이 API 를 호출하지 않는다.
+		오늘(KST) 작성 개수가 제한에 도달했으면 OpenAI 호출 전에 429 `DIARY_DAILY_LIMIT_EXCEEDED` 를 돌려준다.
+		""")
 	@PostMapping("/qna")
 	public ResponseEntity<DiaryGenerateResponseDto> generateDiary(Authentication auth, @Validated @RequestBody DiaryGenerateRequestDto req) {
 		return ResponseEntity.ok(diaryService.generate(auth, req));
@@ -107,6 +113,10 @@ public class DiaryController {
 
 
 	/** 페이지 목록. sort=recent(기본)|oldest, created 는 oldest 의 별칭. */
+	@Operation(summary = "일기 페이지 목록", description = """
+		`sort`: `recent`(최신순, 기본) | `oldest`(오래된순). `created` 는 `oldest` 의 별칭. 그 외 값은 400 `BAD_REQUEST`.
+		응답은 `items` 와 페이지 메타(`page`, `size`, `hasNext`, `totalCount`)를 담은 객체다.
+		""")
 	@GetMapping
 	public DiaryPageResponseDto list(
 		Authentication auth,
@@ -118,6 +128,10 @@ public class DiaryController {
 	}
 
 	/** 월 단위 전체 목록. year/month 생략 시 KST 이번 달. sort 는 목록과 같다. */
+	@Operation(summary = "월 단위 일기 목록", description = """
+		`year`/`month` 를 생략하면 KST 기준 이번 달. 월 전체를 배열로 주며 페이지 메타는 없다.
+		`sort` 는 `recent`(기본) | `oldest`, `created` 는 `oldest` 의 별칭.
+		""")
 	@GetMapping("/calendar")
 	public ResponseEntity<List<DiaryListResponseDto>> getCalendar(
 		Authentication auth,
