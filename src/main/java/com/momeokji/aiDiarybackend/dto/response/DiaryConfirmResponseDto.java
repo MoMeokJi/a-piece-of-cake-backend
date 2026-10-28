@@ -1,5 +1,7 @@
 package com.momeokji.aiDiarybackend.dto.response;
 
+import com.momeokji.aiDiarybackend.entity.DiaryType;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -10,6 +12,7 @@ import java.util.List;
 @Builder
 public class DiaryConfirmResponseDto {
 	private final Long diaryId;
+	private final DiaryType type;
 	private final String content;
 	private final OffsetDateTime createdAt; // KST, +09:00
 	private final String summary;

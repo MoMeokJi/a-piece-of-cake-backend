@@ -13,6 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.momeokji.aiDiarybackend.entity.Diary;
+import com.momeokji.aiDiarybackend.entity.DiaryType;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
 import com.momeokji.aiDiarybackend.service.DiaryImageService;
 import com.momeokji.aiDiarybackend.service.OpenAiService;
@@ -43,8 +44,13 @@ public abstract class DiaryTestSupport extends IntegrationTestSupport {
 
 	/** {@code @CreationTimestamp} 가 저장 시각을 항상 덮어쓰므로, 저장 뒤 SQL 로 원하는 시각을 넣고 다시 읽는다. */
 	protected Diary insertDiary(String memberId, LocalDateTime createdAt) {
+		return insertDiary(memberId, createdAt, DiaryType.FREE);
+	}
+
+	protected Diary insertDiary(String memberId, LocalDateTime createdAt, DiaryType type) {
 		Diary saved = diaryRepository.save(Diary.builder()
 			.userId(memberId)
+			.type(type)
 			.content("본문")
 			.summary("요약")
 			.build());

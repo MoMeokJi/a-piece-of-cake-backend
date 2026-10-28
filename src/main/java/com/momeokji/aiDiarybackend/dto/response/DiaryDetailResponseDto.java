@@ -3,6 +3,8 @@ package com.momeokji.aiDiarybackend.dto.response;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import com.momeokji.aiDiarybackend.entity.DiaryType;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -10,6 +12,7 @@ import lombok.Getter;
 @Builder
 public class DiaryDetailResponseDto {
 	private Long diaryId;
+	private DiaryType type;
 	private String content;
 	private OffsetDateTime createdAt; // KST, +09:00
 

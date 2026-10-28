@@ -32,6 +32,12 @@ public class Diary {
 	@Column(columnDefinition = "TEXT")
 	private String content;
 
+	/** 자유 일기인지 문답 일기인지. 두 생성 경로가 같은 행을 만들므로 여기서만 구분한다. */
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "type", nullable = false, length = 10)
+	private DiaryType type = DiaryType.FREE;
+
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false, nullable = false)
 	private LocalDateTime createdAt;

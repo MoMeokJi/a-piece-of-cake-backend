@@ -13,6 +13,7 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.DiaryColor;
 import com.momeokji.aiDiarybackend.entity.DiaryImage;
+import com.momeokji.aiDiarybackend.entity.DiaryType;
 import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.entity.Music;
 import com.momeokji.aiDiarybackend.repository.DiaryColorRepository;
@@ -91,17 +92,19 @@ public class DiaryService {
 	//질문 일기
 	@Transactional
 	public DiaryConfirmResponseDto confirm(Authentication auth, String text, List<MultipartFile> imageFiles) {
-		return doConfirm(auth, text, imageFiles, true);
+		return doConfirm(auth, text, imageFiles, DiaryType.QNA);
 	}
 
 	//자유 일기
 	@Transactional
 	public DiaryConfirmResponseDto confirmFree(Authentication auth, String text, List<MultipartFile> imageFiles) {
-		return doConfirm(auth, text, imageFiles, false);
+		return doConfirm(auth, text, imageFiles, DiaryType.FREE);
 	}
 
 
-	private DiaryConfirmResponseDto doConfirm(Authentication auth, String text, List<MultipartFile> imageFiles,boolean updateRedis) {
+	/** 문답 일기만 Redis 의 참조 세트(최근 문답·일기)를 갱신한다. 자유 일기는 문답이 없기 때문이다. */
+	private DiaryConfirmResponseDto doConfirm(Authentication auth, String text, List<MultipartFile> imageFiles, DiaryType type) {
+		final boolean updateRedis = type == DiaryType.QNA;
 		final String userId = auth.getName();
 		String summary;
 
@@ -135,6 +138,7 @@ public class DiaryService {
 		Diary diary = diaryRepository.save(
 			Diary.builder()
 				.userId(member.getMemberId())
+				.type(type)
 				.content(text)
 				.summary(summary)
 				.recommandMusic(musicId)
@@ -187,6 +191,7 @@ public class DiaryService {
 		// 응답 반환
 		return DiaryConfirmResponseDto.builder()
 			.diaryId(diary.getDiaryId())
+			.type(diary.getType())
 			.content(diary.getContent())
 			.createdAt(KstTime.toOffset(diary.getCreatedAt()))
 			.summary(summary)
@@ -248,6 +253,7 @@ public class DiaryService {
 
 			return DiaryListResponseDto.builder()
 				.diaryId(d.getDiaryId())
+				.type(d.getType())
 				.summary(d.getSummary())
 				.createdAt(KstTime.toOffset(d.getCreatedAt()))
 				.colors(colorMap.getOrDefault(d.getDiaryId(), List.of()))
@@ -313,6 +319,7 @@ public class DiaryService {
 			// 응답 DTO 매핑
 			return DiaryListResponseDto.builder()
 				.diaryId(d.getDiaryId())
+				.type(d.getType())
 				.summary(d.getSummary())
 				.createdAt(KstTime.toOffset(d.getCreatedAt()))
 				.colors(colorMap.getOrDefault(d.getDiaryId(), List.of()))
@@ -360,6 +367,7 @@ public class DiaryService {
 
 		return DiaryDetailResponseDto.builder()
 			.diaryId(diary.getDiaryId())
+			.type(diary.getType())
 			.content(diary.getContent())
 			.createdAt(KstTime.toOffset(diary.getCreatedAt()))
 			.images(images)
