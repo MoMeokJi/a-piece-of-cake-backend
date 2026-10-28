@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.momeokji.aiDiarybackend.dto.request.NicknameUpdateRequestDto;
+import com.momeokji.aiDiarybackend.dto.request.NotificationUpdateRequestDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryStatsResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.NicknameResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.NotificationResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.UserMeResponseDto;
 import com.momeokji.aiDiarybackend.service.AuthService;
 import com.momeokji.aiDiarybackend.service.DiaryStatsService;
@@ -33,7 +35,15 @@ public class UserController {
 	/** 내 정보. nickname 이 null 이면 아직 닉네임을 정하지 않은 회원이다. */
 	@GetMapping("/me")
 	public ResponseEntity<UserMeResponseDto> me(Authentication auth) {
-		return ResponseEntity.ok(UserMeResponseDto.from(userService.getMe(auth.getName())));
+		return ResponseEntity.ok(userService.getMe(auth.getName()));
+	}
+
+	/** 기록 알림 수신 on/off. 리마인드와 공감 알림을 함께 제어한다. */
+	@PutMapping("/me/notification")
+	public ResponseEntity<NotificationResponseDto> changeNotification(@Validated @RequestBody NotificationUpdateRequestDto req,
+		Authentication auth) {
+		boolean enabled = userService.changeNotificationEnabled(auth.getName(), req.getEnabled()).getNotificationEnabled();
+		return ResponseEntity.ok(new NotificationResponseDto(enabled));
 	}
 
 	/** 마이페이지 통계. 모두 KST 기준. */

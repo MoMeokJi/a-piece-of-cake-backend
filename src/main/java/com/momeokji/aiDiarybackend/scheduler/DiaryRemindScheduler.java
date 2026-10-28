@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * 매일 22시(KST) 리마인드 푸시. 푸시 가능한 기기가 있는 유효 회원 중, 마지막 일기가 1~14일 전인 사람에게 보낸다.
+ * 매일 22시(KST) 리마인드 푸시. 기록 알림을 켠 유효 회원 중 푸시 가능한 기기가 있고, 마지막 일기가 1~14일 전인 사람에게 보낸다.
  *
  * <p>읽기 전용 트랜잭션을 걸지 않는다 — 발송 중 무효 토큰 정리(UPDATE)가 일어날 수 있기 때문이다.
  */
@@ -40,7 +40,7 @@ public class DiaryRemindScheduler {
 		ZoneId kst = ZoneId.of("Asia/Seoul");
 		LocalDate today = LocalDate.now(kst);
 
-		List<Member> members = memberRepository.findByIsValidTrue();
+		List<Member> members = memberRepository.findByIsValidTrueAndNotificationEnabledTrue();
 		// 회원마다 exists 쿼리를 날리는 대신 푸시 가능한 회원 ID 를 한 번에 읽어 거른다.
 		Set<String> pushable = memberDeviceRepository.findMemberIdsWithFcmToken();
 		log.info("REMIND 체크 대상 회원 수 = {}, 푸시 가능 회원 수 = {}", members.size(), pushable.size());

@@ -47,14 +47,24 @@ public class Member {
 	@Column(name = "nickname", length = 10)
 	private String nickname;
 
+	/** 기록 알림(리마인드·공감 푸시) 수신 여부. 기본 꺼짐. 관리자 전체 공지는 이 값과 무관하다. */
+	@Column(name = "notification_enabled", nullable = false, columnDefinition = "TINYINT")
+	@ColumnDefault("0")
+	private Boolean notificationEnabled;
+
 	public static Member create(String memberId) {
 		Member member = new Member();
 		member.memberId = memberId;
 		member.isValid = true;
+		member.notificationEnabled = false;
 		return member;
 	}
 
 	public void changeNickname(String nickname) {
 		this.nickname = nickname;
+	}
+
+	public void changeNotificationEnabled(boolean enabled) {
+		this.notificationEnabled = enabled;
 	}
 }

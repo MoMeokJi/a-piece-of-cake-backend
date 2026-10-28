@@ -31,7 +31,9 @@ class UserIntegrationTest extends IntegrationTestSupport {
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
 			.andExpect(jsonPath("$.memberId").isString())
-			.andExpect(jsonPath("$.nickname").value((Object) null));
+			.andExpect(jsonPath("$.nickname").value((Object) null))
+			.andExpect(jsonPath("$.provider").value("GOOGLE"))
+			.andExpect(jsonPath("$.notificationEnabled").value(false));
 	}
 
 	@Test

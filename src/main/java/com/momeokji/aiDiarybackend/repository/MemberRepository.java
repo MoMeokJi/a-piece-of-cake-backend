@@ -33,6 +33,9 @@ public interface MemberRepository extends JpaRepository<Member,String> {
 
 	List<Member> findByIsValidTrue();
 
+	/** 리마인드 대상: 유효하고 기록 알림을 켠 회원. */
+	List<Member> findByIsValidTrueAndNotificationEnabledTrue();
+
 	@Query(
 		value = """
 		SELECT
