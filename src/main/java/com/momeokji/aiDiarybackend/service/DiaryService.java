@@ -1,5 +1,7 @@
 package com.momeokji.aiDiarybackend.service;
 
+import com.momeokji.aiDiarybackend.common.error.BusinessException;
+import com.momeokji.aiDiarybackend.common.error.ErrorCode;
 import com.momeokji.aiDiarybackend.common.time.KstTime;
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
@@ -326,7 +328,7 @@ public class DiaryService {
 		final String userId = auth.getName();
 
 		Diary diary = diaryRepository.findByDiaryIdAndUserIdAndIsValidTrue(diaryId, userId)
-			.orElseThrow(() -> new IllegalArgumentException("일기를 찾을 수 없습니다."));
+			.orElseThrow(() -> new BusinessException(ErrorCode.DIARY_NOT_FOUND));
 
 		// 색상 일괄 조회
 		List<String> colors = diaryColorRepository
@@ -374,7 +376,7 @@ public class DiaryService {
 
 		log.info("delete request: diaryId={}, tokenUserId={}", diaryId, userId);
 		diaryRepository.findByDiaryIdAndUserIdAndIsValidTrue(diaryId, userId)
-			.orElseThrow(() -> new IllegalArgumentException("일기를 찾을 수 없습니다."));
+			.orElseThrow(() -> new BusinessException(ErrorCode.DIARY_NOT_FOUND));
 
 		LocalDateTime now = LocalDateTime.now();
 
@@ -394,7 +396,7 @@ public class DiaryService {
 		String userId = auth.getName();
 
 		Diary diary = diaryRepository.findByDiaryIdAndUserIdAndIsValidTrue(diaryId, userId)
-			.orElseThrow(() -> new IllegalArgumentException("일기를 찾을 수 없습니다."));
+			.orElseThrow(() -> new BusinessException(ErrorCode.DIARY_NOT_FOUND));
 
 		diary.updateContent(newContent);
 

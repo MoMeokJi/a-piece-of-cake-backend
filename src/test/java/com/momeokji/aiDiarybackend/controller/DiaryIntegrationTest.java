@@ -1,6 +1,7 @@
 package com.momeokji.aiDiarybackend.controller;
 
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -23,5 +24,28 @@ class DiaryIntegrationTest extends DiaryTestSupport {
 		mockMvc.perform(get("/diaries/" + d.getDiaryId()).header(AUTHORIZATION, "Bearer " + token))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.createdAt").value("2025-09-16T21:12:00+09:00"));
+	}
+
+	@Test
+	void missingDiaryIs404() throws Exception {
+		String token = loginAsMember("sub-1");
+
+		mockMvc.perform(get("/diaries/999").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("DIARY_NOT_FOUND"));
+		mockMvc.perform(delete("/diaries/999").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("DIARY_NOT_FOUND"));
+	}
+
+	@Test
+	void otherMembersDiaryIs404() throws Exception {
+		String owner = loginAsMember("sub-1");
+		Diary d = insertDiary(memberIdOf(owner), LocalDateTime.of(2025, 9, 16, 21, 12));
+		String other = loginAsMember("sub-2");
+
+		mockMvc.perform(get("/diaries/" + d.getDiaryId()).header(AUTHORIZATION, "Bearer " + other))
+			.andExpect(status().isNotFound())
+			.andExpect(jsonPath("$.code").value("DIARY_NOT_FOUND"));
 	}
 }
