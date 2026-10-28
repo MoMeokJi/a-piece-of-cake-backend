@@ -14,7 +14,7 @@ public class DiaryListResponseDto {
 	private DiaryType type;
 	private String summary;
 	private OffsetDateTime createdAt; // KST, +09:00
-	private List<String> colors;
+	private List<ColorDto> colors;
 	private MusicDto music;
 
 	@Getter @Builder

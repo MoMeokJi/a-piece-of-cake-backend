@@ -17,7 +17,7 @@ public class DiaryConfirmResponseDto {
 	private final OffsetDateTime createdAt; // KST, +09:00
 	private final String summary;
 	private final List<String> images;
-	private final List<String> colors;
+	private final List<ColorDto> colors;
 	private final MusicDto music;
 
 	@Getter @Builder

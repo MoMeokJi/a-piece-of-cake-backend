@@ -6,6 +6,7 @@ import com.momeokji.aiDiarybackend.common.time.KstTime;
 import com.momeokji.aiDiarybackend.dto.DiarySort;
 import com.momeokji.aiDiarybackend.dto.redis.ReferenceSet;
 import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
+import com.momeokji.aiDiarybackend.dto.response.ColorDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
@@ -18,6 +19,7 @@ import com.momeokji.aiDiarybackend.entity.DiaryImage;
 import com.momeokji.aiDiarybackend.entity.DiaryType;
 import com.momeokji.aiDiarybackend.entity.Member;
 import com.momeokji.aiDiarybackend.entity.Music;
+import com.momeokji.aiDiarybackend.service.DiaryColorService.ColorPick;
 import com.momeokji.aiDiarybackend.repository.DiaryColorRepository;
 import com.momeokji.aiDiarybackend.repository.DiaryImageRepository;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
@@ -126,7 +128,7 @@ public class DiaryService {
 		}
 
 		String colorsJson  = openAiService.call("colors",  Map.of("text", text));
-		List<String> colors = diaryColorService.parseHexColors(colorsJson);
+		List<ColorPick> colors = diaryColorService.parseColors(colorsJson);
 
 		// 음악 추천
 		Music picked = musicService.pickRandomMusicByDiaryText(text);
@@ -144,15 +146,18 @@ public class DiaryService {
 				.build()
 		);
 
-		// 색상 저장
+		// 색상 저장 (최대 2개)
+		List<ColorDto> colorDtos = new ArrayList<>();
 		for (int i = 0; i < Math.min(2, colors.size()); i++) {
-			diaryColorRepository.save(
+			DiaryColor saved = diaryColorRepository.save(
 				DiaryColor.builder()
 					.diaryId(diary.getDiaryId())
 					.colorId(i)
-					.colorName(colors.get(i))
+					.colorName(colors.get(i).hex())
+					.name(colors.get(i).name())
 					.build()
 			);
+			colorDtos.add(ColorDto.from(saved));
 		}
 
 		// s3에 이미지 저장 후 s3 url db에 저장
@@ -195,7 +200,7 @@ public class DiaryService {
 			.createdAt(KstTime.toOffset(diary.getCreatedAt()))
 			.summary(summary)
 			.images(imageUrls)
-			.colors(colors)
+			.colors(colorDtos)
 			.music(musicDto)
 			.build();
 	}
@@ -233,13 +238,13 @@ public class DiaryService {
 	/** 목록·캘린더 공용 매핑. 색상과 음악은 각각 한 번의 IN 조회로 가져온다. */
 	private List<DiaryListResponseDto> toListDtos(List<Diary> diaries) {
 		List<Long> diaryIds = diaries.stream().map(Diary::getDiaryId).toList();
-		Map<Long, List<String>> colorMap = diaryIds.isEmpty()
+		Map<Long, List<ColorDto>> colorMap = diaryIds.isEmpty()
 			? Map.of()
 			: diaryColorRepository.findByDiaryIdInOrderByDiaryIdAscColorIdAsc(diaryIds).stream()
 			.collect(Collectors.groupingBy(
 				DiaryColor::getDiaryId,
 				LinkedHashMap::new,
-				Collectors.mapping(DiaryColor::getColorName, Collectors.toList())
+				Collectors.mapping(ColorDto::from, Collectors.toList())
 			));
 
 		List<Long> musicIds = diaries.stream()
@@ -280,10 +285,10 @@ public class DiaryService {
 			.orElseThrow(() -> new BusinessException(ErrorCode.DIARY_NOT_FOUND));
 
 		// 색상 일괄 조회
-		List<String> colors = diaryColorRepository
+		List<ColorDto> colors = diaryColorRepository
 			.findByDiaryIdOrderByColorIdAsc(diary.getDiaryId())
 			.stream()
-			.map(DiaryColor::getColorName)
+			.map(ColorDto::from)
 			.toList();
 
 		List<String> images = diaryImageRepository.findByDiaryIdOrderByImageIdAsc(diary.getDiaryId())

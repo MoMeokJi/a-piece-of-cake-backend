@@ -1,5 +1,8 @@
 package com.momeokji.aiDiarybackend.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -139,6 +142,38 @@ class DiaryIntegrationTest extends DiaryTestSupport {
 		mockMvc.perform(get("/diaries").param("sort", "weird").header(AUTHORIZATION, "Bearer " + token))
 			.andExpect(status().isBadRequest())
 			.andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+	}
+
+	@Test
+	void legacyColorPromptGivesHexWithoutName() throws Exception {
+		stubOpenAi();
+		String token = loginAsMember("sub-1");
+
+		confirm("/diaries/free", token, "자유 일기")
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.colors[0].hex").value("#C3E9A6"))
+			.andExpect(jsonPath("$.colors[0].name").value((Object) null));
+	}
+
+	@Test
+	void colorNamesComeFromPromptAndShowInDetailAndList() throws Exception {
+		stubOpenAi();
+		when(openAiService.call(eq("colors"), any()))
+			.thenReturn("{\"colors\":[{\"name\":\"새싹 연두\",\"hex\":\"#C3E9A6\"},{\"name\":\"하양\",\"hex\":\"#FFFFFF\"}]}");
+		String token = loginAsMember("sub-1");
+
+		String body = confirm("/diaries/free", token, "자유 일기")
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.colors[0].name").value("새싹 연두"))
+			.andExpect(jsonPath("$.colors[0].hex").value("#C3E9A6"))
+			.andReturn().getResponse().getContentAsString();
+		long diaryId = objectMapper.readTree(body).get("diaryId").asLong();
+
+		mockMvc.perform(get("/diaries/" + diaryId).header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.colors[1].name").value("하양"))
+			.andExpect(jsonPath("$.colors[1].hex").value("#FFFFFF"));
+		mockMvc.perform(get("/diaries").header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(jsonPath("$.items[0].colors[0].name").value("새싹 연두"));
 	}
 
 	// ---- helpers ----

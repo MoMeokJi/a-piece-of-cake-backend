@@ -8,3 +8,6 @@
 
 -- 1. 일기 타입 (FREE / QNA). 기존 행은 알 수 없으므로 FREE 로 둔다.
 ALTER TABLE diary ADD COLUMN type VARCHAR(10) NOT NULL DEFAULT 'FREE';
+
+-- 9. 색상 이름. color_name 컬럼은 hex 를 담고 있으며 이름을 바꾸지 않는다. 프롬프트가 이름을 주기 전 일기는 NULL.
+ALTER TABLE diary_color ADD COLUMN name VARCHAR(30) NULL;

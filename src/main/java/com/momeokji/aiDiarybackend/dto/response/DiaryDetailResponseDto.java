@@ -17,7 +17,7 @@ public class DiaryDetailResponseDto {
 	private OffsetDateTime createdAt; // KST, +09:00
 
 	private List<String> images;   // 일단 null
-	private List<String> colors;   // HEX 코드
+	private List<ColorDto> colors;
 
 	private MusicDto music;
 	private String feedbackMsg;    // 엔티티에 없으면 null
