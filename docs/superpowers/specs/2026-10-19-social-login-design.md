@@ -366,6 +366,10 @@
 ### 8.3 푸시 발송 변경
 - `FcmService`
   - 회원 단위 발송은 그 회원의 `member_device` 중 `fcm_token`이 있는 모든 기기로 보낸다. OS별 설정은 기기의 `os`를 기준으로 한다.
+  - 메시지 구성(2026-11-07 앱팀 요청 반영): OS와 무관하게 `notification{title, body}`와 `data`를 모두 싣는다. 앱은 알림을 직접 그리지 않고 FCM SDK가 띄운다.
+    - `data`: `type`(`FEEDBACK` | `REMIND` | `ADMIN_MESSAGE`), `diaryId`(FEEDBACK일 때만, 문자열), `title`, `body`.
+    - Android: priority `HIGH`, `AndroidNotification.channelId = "high_importance_channel"`.
+    - iOS: 헤더 `apns-priority: 10`, `apns-push-type: alert`; aps `badge 0`, `sound "default"`. `content-available`은 넣지 않는다(백그라운드 작업 없음).
   - 전체 발송은 `fcm_token`이 있는 모든 기기로 보낸다.
   - FCM이 `UNREGISTERED`나 `INVALID_ARGUMENT`(토큰 무효)로 응답하면 그 기기의 `fcm_token`을 NULL로 정리한다.
 - `DiaryRemindScheduler`는 `member.deviceId` 확인 대신, 푸시 가능한 기기가 있는 유효 회원을 대상으로 한다.
