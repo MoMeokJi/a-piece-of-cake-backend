@@ -21,6 +21,8 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.ApnsConfig;
 import com.google.firebase.messaging.FirebaseMessagingException;
 import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.MessagingErrorCode;
@@ -157,28 +159,71 @@ class FcmServiceTest {
 	}
 
 	@Test
-	void iosDeviceGetsApnsNotification() throws Exception {
+	void iosDeviceGetsApnsAlertWithImmediatePriorityAndDefaultSound() throws Exception {
 		device("dev-a", "m1", "IOS", "fcm-A");
 
 		service.sendToMember("m1", "t", "b", null);
 
-		ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-		verify(sender).send(captor.capture());
-		assertThat(field(captor.getValue(), "apnsConfig")).isNotNull();
-		assertThat(field(captor.getValue(), "notification")).isNotNull();
-		assertThat(field(captor.getValue(), "androidConfig")).isNull();
+		Message message = sent();
+		assertThat(field(message, "androidConfig")).isNull();
+		assertNotificationIs(message, "t", "b");
+
+		ApnsConfig apns = (ApnsConfig)field(message, "apnsConfig");
+		assertThat(apns).isNotNull();
+		Map<String, String> headers = mapField(apns, "headers");
+		assertThat(headers).containsEntry("apns-priority", "10").containsEntry("apns-push-type", "alert");
+		Map<String, Object> payload = mapField(apns, "payload");
+		@SuppressWarnings("unchecked")
+		Map<String, Object> aps = (Map<String, Object>)payload.get("aps");
+		assertThat(aps).containsEntry("badge", 0).containsEntry("sound", "default");
+		// 앱이 백그라운드에서 할 일이 없으므로 content-available 은 넣지 않는다
+		assertThat(aps).doesNotContainKey("content-available");
 	}
 
 	@Test
-	void androidDeviceGetsHighPriorityDataMessage() throws Exception {
+	void androidDeviceGetsNotificationOnHighImportanceChannel() throws Exception {
 		device("dev-a", "m1", "AND", "fcm-A");
 
 		service.sendToMember("m1", "t", "b", null);
 
+		Message message = sent();
+		assertThat(field(message, "apnsConfig")).isNull();
+		assertNotificationIs(message, "t", "b");
+
+		AndroidConfig android = (AndroidConfig)field(message, "androidConfig");
+		assertThat(android).isNotNull();
+		assertThat(field(android, "priority")).isEqualTo("high");
+		Object notification = field(android, "notification");
+		assertThat(notification).isNotNull();
+		assertThat(field(notification, "channelId")).isEqualTo("high_importance_channel");
+	}
+
+	@Test
+	void dataCarriesTypeAndTitleBodyRegardlessOfOs() throws Exception {
+		device("dev-a", "m1", "AND", "fcm-A");
+		device("dev-b", "m1", "IOS", "fcm-B");
+
+		service.feedbackNotification("m1", 7L);
+
 		ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
-		verify(sender).send(captor.capture());
-		assertThat(field(captor.getValue(), "androidConfig")).isNotNull();
-		assertThat(field(captor.getValue(), "apnsConfig")).isNull();
+		verify(sender, times(2)).send(captor.capture());
+		for (Message message : captor.getAllValues()) {
+			Map<String, String> data = mapField(message, "data");
+			assertThat(data)
+				.containsEntry("type", "FEEDBACK")
+				.containsEntry("diaryId", "7")
+				.containsKeys("title", "body");
+		}
+	}
+
+	@Test
+	void remindDataHasNoDiaryId() throws Exception {
+		device("dev-a", "m1", "AND", "fcm-A");
+
+		service.remindNotification("m1");
+
+		Map<String, String> data = mapField(sent(), "data");
+		assertThat(data).containsEntry("type", "REMIND").doesNotContainKey("diaryId");
 	}
 
 	@Test
@@ -207,6 +252,24 @@ class FcmServiceTest {
 	private void device(String deviceId, String memberId, String os, String fcm) {
 		repo.save(MemberDevice.open(deviceId, memberId, os, fcm, "hash-" + deviceId, NOW.plusDays(60), NOW));
 		em.flush();
+	}
+
+	private Message sent() throws FirebaseMessagingException {
+		ArgumentCaptor<Message> captor = ArgumentCaptor.forClass(Message.class);
+		verify(sender).send(captor.capture());
+		return captor.getValue();
+	}
+
+	private static void assertNotificationIs(Message message, String title, String body) {
+		Object notification = field(message, "notification");
+		assertThat(notification).isNotNull();
+		assertThat(field(notification, "title")).isEqualTo(title);
+		assertThat(field(notification, "body")).isEqualTo(body);
+	}
+
+	@SuppressWarnings("unchecked")
+	static <V> Map<String, V> mapField(Object target, String name) {
+		return (Map<String, V>) field(target, name);
 	}
 
 	static String tokenOf(Message message) {

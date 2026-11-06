@@ -7,6 +7,7 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 
 import com.google.firebase.messaging.AndroidConfig;
+import com.google.firebase.messaging.AndroidNotification;
 import com.google.firebase.messaging.ApnsConfig;
 import com.google.firebase.messaging.Aps;
 import com.google.firebase.messaging.FirebaseMessagingException;
@@ -29,6 +30,9 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class FcmService {
+
+	/** Android 알림 채널. 앱이 만든 채널 ID 와 같아야 한다(앱팀 합의값). */
+	static final String ANDROID_CHANNEL_ID = "high_importance_channel";
 
 	private final MemberDeviceRepository memberDeviceRepository;
 	private final FcmSender fcmSender;
@@ -101,7 +105,10 @@ public class FcmService {
 		return code == MessagingErrorCode.UNREGISTERED || code == MessagingErrorCode.INVALID_ARGUMENT;
 	}
 
-	/** OS 별 메시지 구성은 기존과 같다. Android 는 데이터 메시지(HIGH), iOS 는 notification + APNs 설정. */
+	/**
+	 * OS 와 무관하게 notification(title, body) 과 data 를 모두 싣는다 — 앱이 직접 알림을 그리지 않고 FCM SDK 가 띄운다.
+	 * Android 는 HIGH 우선순위 + 알림 채널, iOS 는 즉시 배달(apns-priority 10) alert 에 기본 사운드.
+	 */
 	private static Message buildMessage(String token, String os, String title, String body, Map<String, String> data) {
 		Map<String, String> payload = new HashMap<>();
 		if (data != null) {
@@ -112,27 +119,29 @@ public class FcmService {
 
 		Message.Builder builder = Message.builder()
 			.setToken(token)
-			.putAllData(payload);
+			.putAllData(payload)
+			.setNotification(Notification.builder()
+				.setTitle(title)
+				.setBody(body)
+				.build());
 
 		if ("AND".equalsIgnoreCase(os)) {
 			builder.setAndroidConfig(AndroidConfig.builder()
 				.setPriority(AndroidConfig.Priority.HIGH)
+				.setNotification(AndroidNotification.builder()
+					.setChannelId(ANDROID_CHANNEL_ID)
+					.build())
 				.build());
 		} else if ("IOS".equalsIgnoreCase(os)) {
-			builder
-				.setNotification(Notification.builder()
-					.setTitle(title)
-					.setBody(body)
+			// apns-priority 5 는 저전력 배달이라 알림이 늦거나 묶여 온다. content-available 은 백그라운드 작업이 없으므로 뺀다.
+			builder.setApnsConfig(ApnsConfig.builder()
+				.putHeader("apns-priority", "10")
+				.putHeader("apns-push-type", "alert")
+				.setAps(Aps.builder()
+					.setBadge(0)
+					.setSound("default")
 					.build())
-				.setApnsConfig(ApnsConfig.builder()
-					.putHeader("apns-priority", "5")
-					.putHeader("apns-push-type", "alert")
-					.setAps(Aps.builder()
-						.setContentAvailable(true)
-						.setBadge(0)
-						.setSound("true")
-						.build())
-					.build());
+				.build());
 		}
 		return builder.build();
 	}
