@@ -49,8 +49,11 @@ class OpenAiServiceTest {
 	}
 
 	private static OpenAiConfig config(Integer maxOutputTokens) {
-		return new OpenAiConfig("http://openai.test/v1/responses", "sk-test", null,
-			Map.of("colors", new OpenAiConfig.Prompt("gpt-4o-mini", 0.8, maxOutputTokens)));
+		return configWith(new OpenAiConfig.Prompt("gpt-4o-mini", 0.8, maxOutputTokens, null));
+	}
+
+	private static OpenAiConfig configWith(OpenAiConfig.Prompt colors) {
+		return new OpenAiConfig("http://openai.test/v1/responses", "sk-test", null, Map.of("colors", colors));
 	}
 
 	private static OpenAiService service(OpenAiConfig config, ExchangeFunction exchange) {
@@ -93,7 +96,23 @@ class OpenAiServiceTest {
 
 		JsonNode body = om.readTree(sent.get());
 		assertFalse(body.has("max_output_tokens"), body.toString());
+		assertFalse(body.has("reasoning"), body.toString());
 		assertNotNull(body.get("temperature"));
+	}
+
+	/** reasoning 모델(gpt-6-luna 등)은 {@code reasoning.effort} 로 사고량을 정한다. 설정이 있을 때만 보낸다. */
+	@Test
+	void sendsReasoningEffortWhenConfigured() throws Exception {
+		AtomicReference<String> sent = new AtomicReference<>();
+		OpenAiService service = service(configWith(new OpenAiConfig.Prompt("gpt-6-luna", null, 2048, "low")),
+			capturing(sent, OUTPUT_RESPONSE));
+
+		service.call("colors", Map.of("text", "x"));
+
+		JsonNode body = om.readTree(sent.get());
+		assertEquals("gpt-6-luna", body.get("model").asText());
+		assertEquals("low", body.get("reasoning").get("effort").asText());
+		assertFalse(body.has("temperature"), body.toString());
 	}
 
 	@Test

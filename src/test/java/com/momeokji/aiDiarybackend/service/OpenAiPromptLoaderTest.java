@@ -20,7 +20,7 @@ class OpenAiPromptLoaderTest {
 	private static OpenAiConfig configWithKeys(String... keys) {
 		Map<String, OpenAiConfig.Prompt> prompts = new java.util.LinkedHashMap<>();
 		for (String key : keys) {
-			prompts.put(key, new OpenAiConfig.Prompt("gpt-4o-mini", 0.8, 2048));
+			prompts.put(key, new OpenAiConfig.Prompt("gpt-4o-mini", 0.8, 2048, null));
 		}
 		return new OpenAiConfig("http://localhost", "sk-test", null, prompts);
 	}

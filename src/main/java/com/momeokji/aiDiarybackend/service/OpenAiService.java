@@ -58,6 +58,8 @@ public class OpenAiService {
 					OpenAiRequestDto.Message.user(inputJson)))
 				.temperature(prompt.temperature())
 				.maxOutputTokens(prompt.maxOutputTokens())
+				.reasoning(prompt.reasoningEffort() == null ? null
+					: new OpenAiRequestDto.Reasoning(prompt.reasoningEffort()))
 				.build();
 
 			OpenAiResponseDto res = client.post()
