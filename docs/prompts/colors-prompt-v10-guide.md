@@ -1,5 +1,7 @@
 # 색상 프롬프트 v10 (OpenAI 대시보드에 통째로 붙여 넣는 전체본)
 
+> **2026-11 이후:** 이 문서는 대시보드 저장 프롬프트 시절의 기록이다. 프롬프트 원본은 이제 `src/main/resources/prompts/colors.md` 이고, 아래 "대시보드에서 할 일" 절은 더 이상 유효하지 않다. [README](README.md) 참고.
+
 서버는 `openai.prompts.colors.id` 프롬프트를 버전 번호로 고정해 호출하고, 입력 변수로 `text`(일기 본문) 하나를 넘긴다.
 v9 대비 바뀐 곳은 두 군데다. `[Color Name Rules]` 문단이 새로 들어갔고, `[Output Format]` 이 객체 배열로 바뀌었다.
 색을 고르는 규칙은 v9 그대로다.
@@ -62,7 +64,7 @@ Only if the diary is too short or emotions are completely unreadable:
 
 ---
 
-## 대시보드에서 할 일
+## 대시보드에서 할 일 (더 이상 유효하지 않음 — 저장 프롬프트 종료. 바꾸려면 `src/main/resources/prompts/colors.md` 를 고쳐 PR 로 올린다)
 
 1. https://platform.openai.com/prompts 에서 colors 프롬프트(`pmpt_68fb730d…`)를 연다. 프로젝트 선택이 맞는지 확인한다.
 2. System 메시지 전체를 위 전체본으로 바꾼다. `{{text}}` 가 들어가는 User 메시지는 건드리지 않는다.
