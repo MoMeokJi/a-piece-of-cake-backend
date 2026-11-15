@@ -49,7 +49,7 @@ public class DiaryController {
 
 	@Operation(summary = "문답으로 일기 생성", description = """
 		`target_set` 의 각 항목은 `question`, `answer` 모두 필수(빈 문자열 불가)다.
-		답하지 않은 문항은 **빼고** 보낸다. 전부 건너뛰었으면 앱이 이 API 를 호출하지 않는다.
+		앱은 다섯 문항을 모두 답받아 보낸다(여분이 떨어지면 더 건너뛰지 못하게 한다). 서버는 문항 수를 5개로 강제하지 않으며 1개 이상이면 받는다.
 		선택 질문을 여분으로 교체했다면 `question` 에는 화면에 실제로 보여준 문구를 넣는다.
 		오늘(KST) 작성 개수가 제한에 도달했으면 OpenAI 호출 전에 429 `DIARY_DAILY_LIMIT_EXCEEDED` 를 돌려준다.
 		""")
@@ -61,7 +61,7 @@ public class DiaryController {
 	@Operation(summary = "오늘의 문답 질문", description = """
 		`questions` 는 항상 5개다. 0~1번은 필수 질문이라 건너뛸 수 없고, 2~4번은 선택 질문이다.
 		`optionalSpares` 는 선택 질문을 건너뛸 때 바꿔 끼울 여분이다. 0~5개이고 `questions` 와 겹치지 않는다. 없으면 빈 배열이다.
-		앱은 선택 질문을 건너뛰면 `optionalSpares` 앞에서부터 하나 꺼내 그 자리에 넣고, 여분이 떨어진 뒤 건너뛴 문항은 빼고 진행한다.
+		앱은 선택 질문을 건너뛰면 `optionalSpares` 앞에서부터 하나 꺼내 그 자리에 넣고, 여분이 떨어지면 더 건너뛰지 못하게 하고 답을 받는다.
 		호출할 때마다 새로 무작위로 뽑으므로 작성 화면에 들어올 때 한 번만 호출한다.
 		""")
 	@GetMapping("/question")
