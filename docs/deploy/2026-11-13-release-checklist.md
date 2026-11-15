@@ -188,7 +188,7 @@
 - [ ] 구버전 앱은 새 서버에서 동작하지 않는다(익명 가입·로그인 API 삭제). 새 앱 배포와 강제 업데이트 시점을 서버 배포와 맞춘다.
 - [ ] 관리자 웹: API 경로가 `/admin/**` 로 바뀌었다(예: `/admins/login` → `/admin/auth/login`). 토큰은 응답 바디의 `accessToken` 을 `Authorization` 헤더로 보낸다.
 - [ ] 앱에 전달했는지 확인:
-  - 문답 건너뛰기 변경 — `docs/app-notes/2026-11-12-question-skip.md`
+  - 문답 건너뛰기 변경 — 필수 질문은 건너뛸 수 없고, 선택 질문은 `optionalSpares`(최대 5개)로 교체한다. 계약은 Swagger 의 `GET /diaries/question` 설명에 있다
   - 캘린더 기본 정렬 `recent`, `stats.dailyLimit` 추가
   - 색상 응답이 `{name, hex}` 객체 배열
   - 401 은 `TOKEN_EXPIRED`(재발급 후 재시도)와 `TOKEN_INVALID`(로그인 화면) 구분
