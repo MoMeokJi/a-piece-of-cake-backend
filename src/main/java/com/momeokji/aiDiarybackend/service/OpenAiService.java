@@ -77,16 +77,11 @@ public class OpenAiService {
 			if (res.getOutput_text() != null && !res.getOutput_text().isBlank()) {
 				return res.getOutput_text().trim();
 			}
-			if (res.getOutput() != null && !res.getOutput().isEmpty()
-				&& res.getOutput().get(0).getContent() != null) {
-				return res.getOutput().get(0).getContent().stream()
-					.map(OpenAiResponseDto.ContentItem::getText)
-					.filter(t -> t != null && !t.isBlank())
-					.map(String::trim)
-					.findFirst()
-					.orElseThrow(() -> new RuntimeException("응답 결과가 없습니다."));
+			String text = joinOutputText(res);
+			if (text.isBlank()) {
+				throw new RuntimeException("OpenAI 응답에 본문이 없습니다. " + describe(res));
 			}
-			throw new RuntimeException("output text가 없습니다.");
+			return text.trim();
 		} catch (WebClientResponseException e) {
 			log.error("OpenAI error. status={} body={}", e.getStatusCode(), e.getResponseBodyAsString());
 			throw e;
@@ -94,5 +89,35 @@ public class OpenAiService {
 			log.error("OpenAI 호출 실패", e);
 			throw new RuntimeException(e);
 		}
+	}
+
+	/**
+	 * {@code output} 의 모든 항목에서 {@code output_text} 조각만 순서대로 이어 붙인다(SDK 의 {@code output_text} 와 같은 규칙).
+	 * reasoning 을 켠 모델은 본문 없는 reasoning 항목을 message 앞에 두므로 첫 항목만 보면 안 된다.
+	 */
+	private static String joinOutputText(OpenAiResponseDto res) {
+		if (res.getOutput() == null) {
+			return "";
+		}
+		StringBuilder text = new StringBuilder();
+		for (OpenAiResponseDto.OutputItem item : res.getOutput()) {
+			if (item == null || item.getContent() == null) {
+				continue;
+			}
+			for (OpenAiResponseDto.ContentItem part : item.getContent()) {
+				if (part != null && part.getText() != null && "output_text".equals(part.getType())) {
+					text.append(part.getText());
+				}
+			}
+		}
+		return text.toString();
+	}
+
+	/** 본문이 없을 때 원인을 로그에서 바로 알 수 있도록 상태와 항목 종류를 적는다. 본문 내용은 넣지 않는다. */
+	private static String describe(OpenAiResponseDto res) {
+		String reason = res.getIncomplete_details() == null ? null : res.getIncomplete_details().getReason();
+		List<String> types = res.getOutput() == null ? List.of()
+			: res.getOutput().stream().map(item -> item == null ? "null" : String.valueOf(item.getType())).toList();
+		return "status=" + res.getStatus() + ", incomplete_reason=" + reason + ", output_types=" + types;
 	}
 }

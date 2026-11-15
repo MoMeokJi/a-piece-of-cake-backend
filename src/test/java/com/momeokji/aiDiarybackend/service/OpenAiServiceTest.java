@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.http.HttpHeaders;
@@ -128,6 +130,59 @@ class OpenAiServiceTest {
 			capturing(new AtomicReference<>(), "{\"output_text\":\" 생성된 일기 \"}"));
 
 		assertEquals("생성된 일기", service.call("colors", Map.of("text", "x")));
+	}
+
+	/**
+	 * reasoning 을 켠 모델은 {@code output} 맨 앞에 본문이 없는 reasoning 항목을 두고 그 뒤에 message 를 준다.
+	 * 첫 항목만 보면 본문을 놓친다. 2026-11-15 실호출에서 초안 생성(effort=low)이 이 때문에 500 이 났다.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = {
+		"{\"type\":\"reasoning\",\"summary\":[]}",
+		"{\"type\":\"reasoning\",\"summary\":[],\"content\":[]}"
+	})
+	void returnsMessageTextWhenReasoningItemComesFirst(String reasoningItem) {
+		String response = "{\"status\":\"completed\",\"output\":[" + reasoningItem
+			+ ",{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\" 생성된 일기 \"}]}]}";
+		OpenAiService service = service(config(null), capturing(new AtomicReference<>(), response));
+
+		assertEquals("생성된 일기", service.call("colors", Map.of("text", "x")));
+	}
+
+	/** reasoning 항목이 사고 과정 텍스트를 담아 오더라도 일기 본문에 섞이면 안 된다. */
+	@Test
+	void reasoningTextIsNotMixedIntoTheResult() {
+		String response = "{\"output\":[{\"type\":\"reasoning\",\"content\":[{\"type\":\"reasoning_text\",\"text\":\"생각 중\"}]},"
+			+ "{\"type\":\"message\",\"content\":[{\"type\":\"output_text\",\"text\":\"생성된 일기\"}]}]}";
+		OpenAiService service = service(config(null), capturing(new AtomicReference<>(), response));
+
+		assertEquals("생성된 일기", service.call("colors", Map.of("text", "x")));
+	}
+
+	/** SDK 의 {@code output_text} 와 같게, message 의 output_text 조각을 순서대로 이어 붙인다. */
+	@Test
+	void joinsAllOutputTextPartsOfMessages() {
+		String response = "{\"output\":[{\"type\":\"message\",\"content\":["
+			+ "{\"type\":\"output_text\",\"text\":\"앞\"},{\"type\":\"output_text\",\"text\":\"뒤\"}]}]}";
+		OpenAiService service = service(config(null), capturing(new AtomicReference<>(), response));
+
+		assertEquals("앞뒤", service.call("colors", Map.of("text", "x")));
+	}
+
+	/** 본문이 없을 때는 왜 없는지(토큰 한도로 잘림 등)를 로그에서 바로 알 수 있어야 한다. */
+	@Test
+	void failureNamesStatusReasonAndItemTypesWhenThereIsNoText() {
+		String response = "{\"status\":\"incomplete\",\"incomplete_details\":{\"reason\":\"max_output_tokens\"},"
+			+ "\"output\":[{\"type\":\"reasoning\",\"summary\":[]}]}";
+		OpenAiService service = service(config(null), capturing(new AtomicReference<>(), response));
+
+		RuntimeException e = org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class,
+			() -> service.call("colors", Map.of("text", "x")));
+
+		String message = String.valueOf(e.getCause() != null ? e.getCause().getMessage() : e.getMessage());
+		assertTrue(message.contains("incomplete"), message);
+		assertTrue(message.contains("max_output_tokens"), message);
+		assertTrue(message.contains("reasoning"), message);
 	}
 
 	@Test
