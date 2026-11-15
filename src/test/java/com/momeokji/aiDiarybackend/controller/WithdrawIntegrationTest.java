@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -55,6 +56,23 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		mockMvc.perform(get("/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + access))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.code").value("TOKEN_INVALID"));
+	}
+
+	/** 개인정보처리방침이 "탈퇴 시 닉네임 즉시 삭제"를 약속한다. 남는 회원 행에 이용자가 지은 이름이 없어야 한다. */
+	@Test
+	void withdrawClearsNickname() throws Exception {
+		String access = googleLogin("sub-nick", DEVICE_A).get("accessToken").asText();
+		String memberId = me(access);
+		mockMvc.perform(put("/users/me/nickname").header(HttpHeaders.AUTHORIZATION, "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of("nickname", "조각이"))))
+			.andExpect(status().isOk());
+		assertThat(memberRepository.findById(memberId)).get().extracting(Member::getNickname).isEqualTo("조각이");
+
+		mockMvc.perform(delete("/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + access))
+			.andExpect(status().isNoContent());
+
+		assertThat(memberRepository.findById(memberId)).get().extracting(Member::getNickname).isNull();
 	}
 
 	@Test

@@ -27,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  * <ol>
  *   <li>애플 계정에 저장된 refresh 토큰이 있으면 revoke 한다(실패해도 계속)</li>
  *   <li>소셜 계정과 기기 세션 행을 지운다 — 이후 refresh 가 불가능해진다</li>
- *   <li>일기·색상·이미지와 회원을 soft delete 하고 Redis 유저 데이터를 지운다</li>
+ *   <li>일기·색상·이미지와 회원을 soft delete 하고(회원의 닉네임은 이때 지운다) Redis 유저 데이터를 지운다</li>
  * </ol>
  * 탈퇴 후 같은 소셜 계정으로 로그인하면 새 member_id 로 새로 가입된다.
  */

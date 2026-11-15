@@ -21,11 +21,12 @@ public interface MemberRepository extends JpaRepository<Member,String> {
 
 	Optional<Member> findByMemberIdAndIsValidTrue(String memberId);
 
+	/** 탈퇴 처리. 이용자가 지은 닉네임은 함께 지워, 남는 행에 임의 ID 와 가입·탈퇴 시각만 남긴다. */
 	@Transactional
 	@Modifying
 	@Query("""
       update Member m
-         set m.isValid = false, m.deletedAt = :now
+         set m.isValid = false, m.deletedAt = :now, m.nickname = null
        where m.memberId = :memberId
          and m.isValid = true
       """)
