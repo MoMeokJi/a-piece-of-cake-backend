@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS admin (
     deleted_at DATETIME(6)  NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uk_admin_admin_id (admin_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 2. member.created_at: 가입 시각. 기존 행은 실행 시각으로 채워진다
 --    (기존 익명 회원은 배포 직후 cleanup 스크립트로 정리되므로 값의 정확성은 중요하지 않다).
