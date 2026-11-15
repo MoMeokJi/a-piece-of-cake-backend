@@ -12,6 +12,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -125,6 +128,35 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 			.andExpect(status().isNoContent());
 
 		assertThat(fakeAppleAuthClient.revoked).containsExactly("apple-rt");
+	}
+
+	/**
+	 * 연결 해제가 성공했는지 운영 로그로 확인할 수 있어야 한다.
+	 * 실패만 기록하면 "성공"과 "저장된 토큰이 없어 호출하지 않음"을 구분할 수 없다.
+	 */
+	@Test
+	@ExtendWith(OutputCaptureExtension.class)
+	void appleWithdrawLogsRevokeSuccess(CapturedOutput output) throws Exception {
+		JsonNode login = appleLogin("sub-a", DEVICE_A, "code-1");
+		String memberId = me(login.get("accessToken").asText());
+
+		mockMvc.perform(delete("/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + login.get("accessToken").asText()))
+			.andExpect(status().isNoContent());
+
+		assertThat(output.getOut()).contains("애플 토큰 revoke 완료. memberId=" + memberId);
+	}
+
+	@Test
+	@ExtendWith(OutputCaptureExtension.class)
+	void appleWithdrawWithoutStoredTokenLogsThatRevokeWasSkipped(CapturedOutput output) throws Exception {
+		fakeAppleAuthClient.exchangeResult = java.util.Optional.empty();
+		JsonNode login = appleLogin("sub-a", DEVICE_A, "code-1");
+		String memberId = me(login.get("accessToken").asText());
+
+		mockMvc.perform(delete("/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + login.get("accessToken").asText()))
+			.andExpect(status().isNoContent());
+
+		assertThat(output.getOut()).contains("저장된 애플 토큰이 없어 revoke 를 건너뜁니다. memberId=" + memberId);
 	}
 
 	@Test
