@@ -11,9 +11,9 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
 
 	@Query(value = """
         SELECT * FROM question_list
-        WHERE question_id NOT IN (1,2)
+		WHERE UPPER(category) = UPPER(:category)
         ORDER BY RAND()
         LIMIT :limit
         """, nativeQuery = true)
-	List<Question> pickRandomQuestion(@Param("limit") int limit);
+	List<Question> pickRandomQuestionByCategory(@Param("category") String category, @Param("limit") int limit);
 }

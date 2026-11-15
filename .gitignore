@@ -35,3 +35,13 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### 로컬 시크릿 (커밋 금지) ###
+.env
+src/main/resources/firebase-service-account.json
+src/main/resources/application-local.properties
+.env.bak.*
+run-local.sh
+
+# 로컬 설정 백업본도 커밋 금지 (실제 키가 들어 있다)
+src/main/resources/application-local.properties*

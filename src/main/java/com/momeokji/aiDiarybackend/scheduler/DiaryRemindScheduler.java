@@ -1,47 +1,54 @@
 package com.momeokji.aiDiarybackend.scheduler;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
-import com.momeokji.aiDiarybackend.entity.Diary;
-import com.momeokji.aiDiarybackend.entity.Member;
-import com.momeokji.aiDiarybackend.repository.DiaryRepository;
-import com.momeokji.aiDiarybackend.repository.MemberRepository;
-import com.momeokji.aiDiarybackend.service.FcmService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import com.momeokji.aiDiarybackend.common.time.KstTime;
+import com.momeokji.aiDiarybackend.entity.Diary;
+import com.momeokji.aiDiarybackend.entity.Member;
+import com.momeokji.aiDiarybackend.repository.DiaryRepository;
+import com.momeokji.aiDiarybackend.repository.MemberDeviceRepository;
+import com.momeokji.aiDiarybackend.repository.MemberRepository;
+import com.momeokji.aiDiarybackend.service.FcmService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * 매일 22시(KST) 리마인드 푸시. 기록 알림을 켠 유효 회원 중 푸시 가능한 기기가 있고, 마지막 일기가 1~14일 전인 사람에게 보낸다.
+ *
+ * <p>읽기 전용 트랜잭션을 걸지 않는다 — 발송 중 무효 토큰 정리(UPDATE)가 일어날 수 있기 때문이다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class DiaryRemindScheduler {
 
 	private final MemberRepository memberRepository;
+	private final MemberDeviceRepository memberDeviceRepository;
 	private final DiaryRepository diaryRepository;
 	private final FcmService fcmService;
 
 	@Scheduled(cron = "0 0 22 * * *", zone = "Asia/Seoul")
-	@Transactional(readOnly = true)
 	public void sendRemindNotifications() {
-		ZoneId kst = ZoneId.of("Asia/Seoul");
-		LocalDate today = LocalDate.now(kst);
+		LocalDate today = LocalDate.now(KstTime.ZONE);
 
-		List<Member> members = memberRepository.findByIsValidTrue();
-		log.info("REMIND 체크 대상 회원 수 = {}", members.size());
+		List<Member> members = memberRepository.findByIsValidTrueAndNotificationEnabledTrue();
+		// 회원마다 exists 쿼리를 날리는 대신 푸시 가능한 회원 ID 를 한 번에 읽어 거른다.
+		Set<String> pushable = memberDeviceRepository.findMemberIdsWithFcmToken();
+		log.info("REMIND 체크 대상 회원 수 = {}, 푸시 가능 회원 수 = {}", members.size(), pushable.size());
 
 		for (Member member : members) {
 			String memberId = member.getMemberId();
 
-			// FCM 토큰 없으면 스킵
-			String deviceId = member.getDeviceId();
-			if (deviceId == null || deviceId.isBlank()) {
+			// 푸시 가능한 기기가 없으면 스킵
+			if (!pushable.contains(memberId)) {
 				continue;
 			}
 
@@ -55,7 +62,7 @@ public class DiaryRemindScheduler {
 
 			Diary lastDiary = lastDiaryOpt.get();
 			LocalDate lastDate = lastDiary.getCreatedAt()
-				.atZone(kst)
+				.atZone(KstTime.ZONE)
 				.toLocalDate();
 
 			long days = ChronoUnit.DAYS.between(lastDate, today);
@@ -65,13 +72,8 @@ public class DiaryRemindScheduler {
 				continue;
 			}
 
-			try {
-				fcmService.remindNotification(memberId);
-				log.info("REMIND 알림 발송 완료 memberId={}, daysSinceLastDiary={}",
-					memberId, days);
-			} catch (FirebaseMessagingException e) {
-				log.error("REMIND 알림 발송 실패 memberId={}", memberId, e);
-			}
+			fcmService.remindNotification(memberId);
+			log.info("REMIND 알림 발송 처리 memberId={}, daysSinceLastDiary={}", memberId, days);
 		}
 	}
 }

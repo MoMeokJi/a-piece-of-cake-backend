@@ -21,29 +21,41 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
+	// access 토큰 검증(Nimbus JWT) 과 소셜 ID 토큰 JWKS 검증, 애플 client_secret(ES256) 서명에 사용
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.security:spring-security-test'
+	// 테스트용 인메모리 DB (MySQL 호환 모드). 로컬에 Docker 가 없어 Testcontainers 대신 사용한다.
+	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testImplementation 'me.paulschwarz:spring-dotenv:2.5.4'
     implementation 'me.paulschwarz:spring-dotenv:2.5.4'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
 
 	//db
-	runtimeOnly   'com.mysql:mysql-connector-j'
+	runtimeOnly 'com.mysql:mysql-connector-j:9.4.0'
 	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-
-	//jwt
-	implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
-	runtimeOnly   'io.jsonwebtoken:jjwt-impl:0.13.0'
-	runtimeOnly   'io.jsonwebtoken:jjwt-jackson:0.13.0'
-
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 
 	//webClient
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+	// API 명세 자동 생성 (Swagger UI). 3.x 는 Spring Boot 4 용이므로 2.8.x 를 사용한다.
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.17'
+
+	// macOS 에서 Netty 가 사용하는 네이티브 DNS 리졸버.
+	// 없으면 시작 시 UnsatisfiedLinkError 가 ERROR 로그로 찍히고 시스템 기본 리졸버로 폴백된다.
+	// 버전은 Spring Boot 의 netty-bom 이 관리하므로 명시하지 않는다.
+	// Linux/Windows 에서는 로드되지 않고 무시된다.
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-aarch_64'
+	runtimeOnly 'io.netty:netty-resolver-dns-native-macos::osx-x86_64'
 
     //youtube
     implementation 'com.google.api-client:google-api-client:1.34.1'
@@ -65,4 +77,6 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	// 테스트 JVM 을 일부러 UTC 로 띄운다. 운영 서버가 UTC 여도 애플리케이션이 KST 로 고정하는지 확인하기 위해서다.
+	systemProperty 'user.timezone', 'UTC'
 }

@@ -6,6 +6,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -18,9 +19,23 @@ import com.momeokji.aiDiarybackend.entity.Diary;
 public interface DiaryRepository extends JpaRepository<Diary,Long> {
 	Page<Diary> findByUserIdAndIsValidTrue(String userId, Pageable pageable);
 
-	List<Diary> findByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThanOrderByCreatedAtAsc(String userId, LocalDateTime from, LocalDateTime to);
+	List<Diary> findByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(String userId, LocalDateTime from, LocalDateTime to, Sort sort);
 
 	Optional<Diary> findByDiaryIdAndUserIdAndIsValidTrue(Long diaryId, String userId);
+
+	long countByIsValidTrue();
+
+	long countByUserIdAndIsValidTrue(String userId);
+
+	long countByUserIdAndIsValidTrueAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(String userId, LocalDateTime fromInclusive, LocalDateTime toExclusive);
+
+	/**
+	 * 유효한 일기의 저장 시각 전부. 연속 일수 계산용으로, 날짜 변환은 자바에서 한다.
+	 * 네이티브 {@code DATE()} 는 드라이버가 JVM 타임존으로 {@code java.sql.Date} 를 만들며 하루가 밀릴 수 있어 쓰지 않는다.
+	 * 회원당 하루 최대 몇 개라 행 수가 작다.
+	 */
+	@Query("select d.createdAt from Diary d where d.userId = :userId and d.isValid = true")
+	List<LocalDateTime> findCreatedAtsByUserId(@Param("userId") String userId);
 
 	@Modifying
 	@Query("""
@@ -66,5 +81,24 @@ public interface DiaryRepository extends JpaRepository<Diary,Long> {
           and d.deletedAt <= :threshold
     """)
 	int deleteExpired(@Param("threshold") LocalDateTime threshold);
+
+	@Query(
+		value = """
+		SELECT
+			DATE(d.created_at) AS date,
+			COUNT(*) AS totalCount
+		FROM diary d
+		WHERE d.is_valid = 1
+		  AND d.created_at >= :from
+		  AND d.created_at < :to
+		GROUP BY DATE(d.created_at)
+		ORDER BY DATE(d.created_at)
+		""",
+		nativeQuery = true
+	)
+	List<DailyCountStatistics> countDailyDiaries(
+		@Param("from") LocalDateTime from,
+		@Param("to") LocalDateTime to
+	);
 
 }

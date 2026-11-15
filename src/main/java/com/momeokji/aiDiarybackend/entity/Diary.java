@@ -3,7 +3,6 @@ package com.momeokji.aiDiarybackend.entity;
 import java.time.LocalDateTime;
 
 import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.DynamicInsert;
 
 import jakarta.persistence.*;
@@ -32,7 +31,13 @@ public class Diary {
 	@Column(columnDefinition = "TEXT")
 	private String content;
 
-	@CreationTimestamp
+	/** 자유 일기인지 문답 일기인지. 두 생성 경로가 같은 행을 만들므로 여기서만 구분한다. */
+	@Builder.Default
+	@Enumerated(EnumType.STRING)
+	@Column(name = "type", nullable = false, length = 10)
+	private DiaryType type = DiaryType.FREE;
+
+	/** 저장 시각(KST 벽시계). 서비스가 {@code Clock} 빈으로 넣는다 — 통계·일일 제한과 같은 시계를 쓰기 위해서다. */
 	@Column(name = "created_at", updatable = false, nullable = false)
 	private LocalDateTime createdAt;
 
@@ -45,6 +50,7 @@ public class Diary {
 	@Column(name = "recommand_music")
 	private Long recommandMusic;
 
+	@Builder.Default
 	@Column(name = "is_valid", nullable = false)
 	private Boolean isValid = true;
 
