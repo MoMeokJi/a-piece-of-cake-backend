@@ -26,7 +26,7 @@ CREATE TABLE social_account (
     PRIMARY KEY (id),
     UNIQUE KEY uk_social_account_provider_user (provider, provider_user_id),
     KEY idx_social_account_member (member_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 3.3 member_device: 기기 1대 = 로그인 세션 1개
 CREATE TABLE member_device (
@@ -45,7 +45,7 @@ CREATE TABLE member_device (
     UNIQUE KEY uk_member_device_refresh_hash (refresh_token_hash),
     KEY idx_member_device_member (member_id),
     KEY idx_member_device_prev_hash (prev_refresh_token_hash)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- 3.4 admin.token_version: 관리자 토큰 무효화용
 ALTER TABLE admin ADD COLUMN token_version INT NOT NULL DEFAULT 0;
