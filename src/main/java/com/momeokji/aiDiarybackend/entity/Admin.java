@@ -48,6 +48,14 @@ public class Admin {
 	@ColumnDefault("0")
 	private Boolean isSuper;
 
+	/**
+	 * 토큰 버전(스펙 3.4). 관리자 access 토큰의 {@code ver} claim 과 비교하며, 로그아웃이나 삭제 때 +1 해서
+	 * 발급된 토큰을 전부 무효화한다.
+	 */
+	@Column(name = "token_version", nullable = false)
+	@ColumnDefault("0")
+	private Integer tokenVersion;
+
 	@Builder
 	public Admin(String adminId, String adminPwd, LocalDateTime createdAt, Boolean isValid, Boolean isSuper) {
 		this.adminId = adminId;
@@ -55,6 +63,11 @@ public class Admin {
 		this.createdAt = createdAt;
 		this.isValid = isValid;
 		this.isSuper = isSuper;
+		this.tokenVersion = 0;
+	}
+
+	public void bumpTokenVersion() {
+		this.tokenVersion = (this.tokenVersion == null ? 0 : this.tokenVersion) + 1;
 	}
 
 	public void approve() {
@@ -64,5 +77,6 @@ public class Admin {
 	public void delete(LocalDateTime deletedAt) {
 		this.isValid = false;
 		this.deletedAt = deletedAt;
+		bumpTokenVersion();
 	}
 }

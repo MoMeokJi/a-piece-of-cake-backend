@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/musics")
+@RequestMapping("/admin/musics")
 @RequiredArgsConstructor
 public class MusicController {
 

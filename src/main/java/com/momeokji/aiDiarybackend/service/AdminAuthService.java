@@ -7,12 +7,15 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.momeokji.aiDiarybackend.common.util.JwtUtil;
+import com.momeokji.aiDiarybackend.common.error.BusinessException;
+import com.momeokji.aiDiarybackend.common.error.ErrorCode;
 import com.momeokji.aiDiarybackend.dto.request.AdminSignupRequestDto;
-import com.momeokji.aiDiarybackend.dto.response.AdminLoginResultDto;
+import com.momeokji.aiDiarybackend.dto.response.AdminLoginResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.AdminResponseDto;
 import com.momeokji.aiDiarybackend.entity.Admin;
 import com.momeokji.aiDiarybackend.repository.AdminRepository;
+import com.momeokji.aiDiarybackend.security.AccessTokenIssuer;
+import com.momeokji.aiDiarybackend.security.IssuedAccessToken;
 
 import lombok.RequiredArgsConstructor;
 
@@ -22,7 +25,10 @@ public class AdminAuthService {
 
 	private final AdminRepository adminRepository;
 	private final PasswordEncoder passwordEncoder;
-	private final JwtUtil jwt;
+	private final AccessTokenIssuer accessTokenIssuer;
+
+	/** 아이디가 없을 때도 비밀번호 비교에 비슷한 시간을 쓰기 위한 더미 해시. */
+	private static final String DUMMY_HASH = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder().encode("dummy");
 
 	@Transactional
 	public void signup(AdminSignupRequestDto req) {
@@ -41,29 +47,37 @@ public class AdminAuthService {
 		);
 	}
 
+	/**
+	 * 로그인(스펙 9.3). 아이디와 비밀번호를 먼저 확인하고, 둘 다 맞을 때만 승인 여부를 알린다.
+	 * 아이디 오류와 비밀번호 오류의 응답은 같다 — 아이디 존재 여부를 노출하지 않기 위해서다.
+	 */
 	@Transactional(readOnly = true)
-	public AdminLoginResultDto login(AdminSignupRequestDto req) {
-		Admin admin = adminRepository.findByAdminId(req.getAdminId())
-			.orElseThrow(() -> new IllegalArgumentException("관리자 계정을 찾을 수 없습니다."));
+	public AdminLoginResponseDto login(AdminSignupRequestDto req) {
+		Admin admin = adminRepository.findByAdminId(req.getAdminId()).orElse(null);
+		boolean loginable = admin != null && admin.getDeletedAt() == null;
+		boolean passwordMatches = passwordEncoder.matches(req.getAdminPwd(), loginable ? admin.getAdminPwd() : DUMMY_HASH);
 
+		if (!loginable || !passwordMatches) {
+			throw new BusinessException(ErrorCode.ADMIN_LOGIN_FAILED);
+		}
 		if (!Boolean.TRUE.equals(admin.getIsValid())) {
-			throw new IllegalArgumentException("master 관리자 승인 대기 중인 계정입니다.");
+			throw new BusinessException(ErrorCode.ADMIN_NOT_APPROVED);
 		}
 
-		if (!passwordEncoder.matches(req.getAdminPwd(), admin.getAdminPwd())) {
-			throw new IllegalArgumentException("관리자 비밀번호가 일치하지 않습니다.");
-		}
-
-		return AdminLoginResultDto.builder()
-			.accessToken(jwt.generateAdminAccessToken(admin))
+		IssuedAccessToken access = accessTokenIssuer.issueForAdmin(admin);
+		return AdminLoginResponseDto.builder()
+			.accessToken(access.value())
+			.accessTokenExpiresIn(access.expiresInSeconds())
 			.isSuper(admin.getIsSuper())
 			.build();
 	}
 
-	@Transactional(readOnly = true)
+	/** token_version +1 → 이 관리자에게 발급된 모든 access 토큰이 무효가 된다. */
+	@Transactional
 	public void logout(String adminId) {
-		adminRepository.findByAdminIdAndIsValidTrue(adminId)
+		Admin admin = adminRepository.findByAdminIdAndIsValidTrue(adminId)
 			.orElseThrow(() -> new IllegalArgumentException("유효하지 않은 관리자 계정입니다."));
+		admin.bumpTokenVersion();
 	}
 
 	@Transactional

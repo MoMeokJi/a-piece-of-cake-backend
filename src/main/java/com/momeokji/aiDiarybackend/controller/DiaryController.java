@@ -28,10 +28,12 @@ import com.momeokji.aiDiarybackend.dto.response.DiaryConfirmResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryDetailResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryGenerateResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryListResponseDto;
+import com.momeokji.aiDiarybackend.dto.response.DiaryPageResponseDto;
 import com.momeokji.aiDiarybackend.dto.response.DiaryPatchResponseDto;
 import com.momeokji.aiDiarybackend.service.DiaryService;
 import com.momeokji.aiDiarybackend.service.QuestionService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,11 +47,23 @@ public class DiaryController {
 	private final QuestionService questionService;
 	private final ObjectMapper objectMapper;
 
+	@Operation(summary = "문답으로 일기 생성", description = """
+		`target_set` 의 각 항목은 `question`, `answer` 모두 필수(빈 문자열 불가)다.
+		앱은 다섯 문항을 모두 답받아 보낸다(여분이 떨어지면 더 건너뛰지 못하게 한다). 서버는 문항 수를 5개로 강제하지 않으며 1개 이상이면 받는다.
+		선택 질문을 여분으로 교체했다면 `question` 에는 화면에 실제로 보여준 문구를 넣는다.
+		오늘(KST) 작성 개수가 제한에 도달했으면 OpenAI 호출 전에 429 `DIARY_DAILY_LIMIT_EXCEEDED` 를 돌려준다.
+		""")
 	@PostMapping("/qna")
 	public ResponseEntity<DiaryGenerateResponseDto> generateDiary(Authentication auth, @Validated @RequestBody DiaryGenerateRequestDto req) {
 		return ResponseEntity.ok(diaryService.generate(auth, req));
 	}
 
+	@Operation(summary = "오늘의 문답 질문", description = """
+		`questions` 는 항상 5개다. 0~1번은 필수 질문이라 건너뛸 수 없고, 2~4번은 선택 질문이다.
+		`optionalSpares` 는 선택 질문을 건너뛸 때 바꿔 끼울 여분이다. 0~5개이고 `questions` 와 겹치지 않는다. 없으면 빈 배열이다.
+		앱은 선택 질문을 건너뛰면 `optionalSpares` 앞에서부터 하나 꺼내 그 자리에 넣고, 여분이 떨어지면 더 건너뛰지 못하게 하고 답을 받는다.
+		호출할 때마다 새로 무작위로 뽑으므로 작성 화면에 들어올 때 한 번만 호출한다.
+		""")
 	@GetMapping("/question")
 	public ResponseEntity<DailyQuestionsResponseDto> getDailyQuestions() {
 		return ResponseEntity.ok(questionService.getQuestion());
@@ -57,6 +71,11 @@ public class DiaryController {
 
 
 
+	@Operation(summary = "문답 일기 확정 (multipart)", description = """
+		`text`(필수)와 `images`(최대 4개, 선택)를 multipart 로 보낸다. `type` 은 `QNA` 로 저장된다.
+		응답의 `colors` 는 `[{name, hex}]` 객체 배열이며 `name` 은 null 일 수 있다. `createdAt` 은 `+09:00` 오프셋을 붙인다.
+		오늘(KST) 작성 개수가 제한에 도달했으면 OpenAI 호출 전에 429 `DIARY_DAILY_LIMIT_EXCEEDED` 를 돌려준다.
+		""")
 	@PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<DiaryConfirmResponseDto> confirm(
 		Authentication auth,
@@ -80,6 +99,10 @@ public class DiaryController {
 		return ResponseEntity.created(location).body(res); // 201 + Location + 본문
 	}
 
+	@Operation(summary = "자유 일기 저장 (multipart)", description = """
+		`text`(필수)와 `images`(최대 4개, 선택)를 multipart 로 보낸다. `type` 은 `FREE` 로 저장된다.
+		응답 형식은 문답 확정과 같다. 오늘(KST) 작성 개수가 제한에 도달했으면 429 `DIARY_DAILY_LIMIT_EXCEEDED`.
+		""")
 	@PostMapping(value = "/free", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<DiaryConfirmResponseDto> confirmFree(
 		Authentication auth,
@@ -105,8 +128,13 @@ public class DiaryController {
 
 
 
+	/** 페이지 목록. sort=recent(기본)|oldest, created 는 oldest 의 별칭. */
+	@Operation(summary = "일기 페이지 목록", description = """
+		`sort`: `recent`(최신순, 기본) | `oldest`(오래된순). `created` 는 `oldest` 의 별칭. 그 외 값은 400 `BAD_REQUEST`.
+		응답은 `items` 와 페이지 메타(`page`, `size`, `hasNext`, `totalCount`)를 담은 객체다.
+		""")
 	@GetMapping
-	public List<DiaryListResponseDto> list(
+	public DiaryPageResponseDto list(
 		Authentication auth,
 		@RequestParam(defaultValue = "recent") String sort,
 		@RequestParam(defaultValue = "0") Integer page,
@@ -115,11 +143,19 @@ public class DiaryController {
 		return diaryService.getList(auth, sort, page, size);
 	}
 
+	/** 월 단위 전체 목록. year/month 생략 시 KST 이번 달. sort 는 목록과 같다. */
+	@Operation(summary = "월 단위 일기 목록", description = """
+		`year`/`month` 를 생략하면 KST 기준 이번 달. 월 전체를 배열로 주며 페이지 메타는 없다.
+		`sort` 는 `recent`(기본) | `oldest`, `created` 는 `oldest` 의 별칭.
+		""")
 	@GetMapping("/calendar")
-	public ResponseEntity<List<DiaryListResponseDto>> getCalendar(Authentication auth, @RequestParam(required = false) Integer year, @RequestParam(required = false) Integer month) {
-
-		List<DiaryListResponseDto> result = diaryService.getCalendar(auth, year, month);
-		return ResponseEntity.ok(result);
+	public ResponseEntity<List<DiaryListResponseDto>> getCalendar(
+		Authentication auth,
+		@RequestParam(required = false) Integer year,
+		@RequestParam(required = false) Integer month,
+		@RequestParam(defaultValue = "recent") String sort
+	) {
+		return ResponseEntity.ok(diaryService.getCalendar(auth, year, month, sort));
 	}
 
 

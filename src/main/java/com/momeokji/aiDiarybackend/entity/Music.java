@@ -30,5 +30,9 @@ public class Music {
     @Column(name = "mood")
     private String mood;
 
+    /** 재생 시간(초). 상세 화면의 "3:02" 에 쓴다. 모르면 null. */
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
 
 }

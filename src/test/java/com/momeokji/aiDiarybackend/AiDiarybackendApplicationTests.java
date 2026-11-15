@@ -1,10 +1,10 @@
 package com.momeokji.aiDiarybackend;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
-class AiDiarybackendApplicationTests {
+import com.momeokji.aiDiarybackend.support.IntegrationTestSupport;
+
+class AiDiarybackendApplicationTests extends IntegrationTestSupport {
 
 	@Test
 	void contextLoads() {
