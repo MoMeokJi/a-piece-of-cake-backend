@@ -36,8 +36,9 @@ class OpenApiDocsTest extends IntegrationTestSupport {
 
 		assertThat(docs.at("/paths/~1users~1me~1nickname/put/description").asText())
 			.contains("^[가-힣A-Za-z0-9]{2,10}$");
+		// 앱은 다섯 문항을 모두 보내지만 서버는 문항 수를 강제하지 않는다는 점이 설명에 있어야 한다
 		assertThat(docs.at("/paths/~1diaries~1qna/post/description").asText())
-			.contains("빼고");
+			.contains("1개 이상", "여분");
 		assertThat(docs.at("/paths/~1diaries/post/description").asText())
 			.contains("429", "QNA", "colors");
 		assertThat(docs.at("/paths/~1diaries~1free/post/description").asText())
