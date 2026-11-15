@@ -78,13 +78,23 @@ public class DiaryImageService {
 		}
 	}
 
-	public void deleteImagesFromS3(List<DiaryImage> images) {
+	/**
+	 * S3 에서 사진 파일을 지우고, <b>실제로 지워진 것만</b> 돌려준다.
+	 *
+	 * <p>실패한 사진은 결과에서 빠진다. 호출자는 돌려받은 것만 DB 에서 지워야 한다.
+	 * 실패한 사진의 행까지 지우면 파일 주소를 잃어 그 파일을 다시 지울 수 없다.
+	 */
+	public List<DiaryImage> deleteImagesFromS3(List<DiaryImage> images) {
+		List<DiaryImage> deleted = new ArrayList<>();
 		for (DiaryImage image : images) {
-			deleteSingleImage(image.getImageUrl());
+			if (deleteSingleImage(image.getImageUrl())) {
+				deleted.add(image);
+			}
 		}
+		return deleted;
 	}
 
-	private void deleteSingleImage(String imageUrl) {
+	private boolean deleteSingleImage(String imageUrl) {
 		try {
 			String objectKey = extractObjectKey(imageUrl);
 
@@ -96,9 +106,11 @@ public class DiaryImageService {
 			s3.deleteObject(deleteRequest);
 
 			log.info("S3 이미지 삭제 완료 key={}", objectKey);
+			return true;
 
 		} catch (Exception e) {
 			log.error("S3 이미지 삭제 실패 url={}", imageUrl, e);
+			return false;
 		}
 	}
 

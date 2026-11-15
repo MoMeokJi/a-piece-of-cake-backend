@@ -66,6 +66,18 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 		assertThat(html).contains("Google 계정 또는 Apple 계정");
 	}
 
+	/**
+	 * 영구 삭제 기한은 삭제 스케줄러의 유예 3일 + 실행 주기 1일이다.
+	 * 스케줄러 쪽은 {@code DiaryDeleteSchedulerIntegrationTest} 가 지킨다. 둘 중 하나를 바꾸면 다른 쪽도 바꿔야 한다.
+	 */
+	@Test
+	void privacyPolicyPromisesPermanentDeletionWithinFourDays() throws Exception {
+		String html = body("/privacy");
+
+		assertThat(html).contains("4일 이내에 서버에서 영구 삭제");
+		assertThat(html).doesNotContain("6일 이내");
+	}
+
 	/** 옛 익명(기기 기반) 앱 시절 문구가 남아 있으면 지금 서비스와 다른 내용을 고지하게 된다. */
 	@ParameterizedTest
 	@ValueSource(strings = {"/privacy", "/terms"})

@@ -75,6 +75,23 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		assertThat(memberRepository.findById(memberId)).get().extracting(Member::getNickname).isNull();
 	}
 
+	/** 방침이 "탈퇴 후에는 회원 번호와 가입·탈퇴 일시만 남는다"고 약속한다. 이용자가 고른 알림 설정도 남기지 않는다. */
+	@Test
+	void withdrawResetsNotificationSetting() throws Exception {
+		String access = googleLogin("sub-noti", DEVICE_A).get("accessToken").asText();
+		String memberId = me(access);
+		mockMvc.perform(put("/users/me/notification").header(HttpHeaders.AUTHORIZATION, "Bearer " + access)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(objectMapper.writeValueAsString(Map.of("enabled", true))))
+			.andExpect(status().isOk());
+		assertThat(memberRepository.findById(memberId)).get().extracting(Member::getNotificationEnabled).isEqualTo(true);
+
+		mockMvc.perform(delete("/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + access))
+			.andExpect(status().isNoContent());
+
+		assertThat(memberRepository.findById(memberId)).get().extracting(Member::getNotificationEnabled).isEqualTo(false);
+	}
+
 	@Test
 	void reloginAfterWithdrawCreatesNewMember() throws Exception {
 		JsonNode first = googleLogin("sub-1", DEVICE_A);
