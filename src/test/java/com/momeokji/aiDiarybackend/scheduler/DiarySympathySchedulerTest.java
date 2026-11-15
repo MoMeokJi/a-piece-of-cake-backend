@@ -1,6 +1,7 @@
 package com.momeokji.aiDiarybackend.scheduler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -9,10 +10,14 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.scheduling.annotation.Scheduled;
 
 import com.momeokji.aiDiarybackend.entity.Diary;
 import com.momeokji.aiDiarybackend.entity.Member;
@@ -58,6 +63,32 @@ class DiarySympathySchedulerTest {
 		scheduler.fillFeedbackMessages();
 
 		verify(fcmService).feedbackNotification("m1", 1L);
+	}
+
+	/**
+	 * 공감 메시지는 일기를 쓰고 2~4분 사이에 도착한다(쓴 지 2분이 지난 일기를 2분마다 확인).
+	 * 2026-11-15 에 5~10분에서 줄였다. 바로 오면 자동 응답처럼 느껴지고, 너무 늦으면 묻힌다.
+	 */
+	@Test
+	void picksDiariesWrittenAtLeastTwoMinutesAgo() {
+		ArgumentCaptor<LocalDateTime> threshold = ArgumentCaptor.forClass(LocalDateTime.class);
+		when(diaryRepository.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(threshold.capture()))
+			.thenReturn(List.of());
+		LocalDateTime before = LocalDateTime.now();
+
+		scheduler.fillFeedbackMessages();
+
+		LocalDateTime after = LocalDateTime.now();
+		assertFalse(threshold.getValue().isBefore(before.minusMinutes(2)), threshold.getValue().toString());
+		assertFalse(threshold.getValue().isAfter(after.minusMinutes(2)), threshold.getValue().toString());
+	}
+
+	@Test
+	void runsEveryTwoMinutes() throws Exception {
+		Scheduled scheduled = DiarySympathyScheduler.class.getMethod("fillFeedbackMessages").getAnnotation(Scheduled.class);
+
+		assertEquals(Duration.ofMinutes(2).toMillis(), scheduled.fixedDelay());
+		assertEquals(Duration.ofMinutes(2).toMillis(), scheduled.initialDelay());
 	}
 
 	/** 일기마다 회원을 조회하지 않고, 대상 일기의 회원을 한 번에 읽는다. */

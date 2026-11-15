@@ -20,7 +20,12 @@ import com.momeokji.aiDiarybackend.service.OpenAiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/** 5분마다 공감(시식평) 메시지를 만든다. 메시지는 항상 저장하고, 푸시는 기록 알림을 켠 회원에게만 보낸다. */
+/**
+ * 공감(시식평) 메시지를 만든다. 메시지는 항상 저장하고, 푸시는 기록 알림을 켠 회원에게만 보낸다.
+ *
+ * <p>쓴 지 {@link #WAIT_MINUTES}분이 지난 일기를 2분마다 확인하므로, 일기를 쓰고 2~4분 사이에 도착한다.
+ * 바로 보내면 자동 응답처럼 느껴져 일부러 뜸을 들인다.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -31,11 +36,16 @@ public class DiarySympathyScheduler {
 	private final FcmService fcmService;
 	private final MemberRepository memberRepository;
 
-	//5분 간격으로 공감메시지 생성
-	@Scheduled(initialDelay = 300000,fixedDelay = 300000) // 300000 ms = 5분
+	/** 일기를 쓴 뒤 공감 메시지를 만들기까지 기다리는 최소 시간. */
+	static final int WAIT_MINUTES = 2;
+
+	/** 실행 간격(밀리초). 2분. */
+	private static final long INTERVAL_MILLIS = 2 * 60 * 1000L;
+
+	@Scheduled(initialDelay = INTERVAL_MILLIS, fixedDelay = INTERVAL_MILLIS)
 	@Transactional
 	public void fillFeedbackMessages() {
-		LocalDateTime threshold = LocalDateTime.now().minusMinutes(5);
+		LocalDateTime threshold = LocalDateTime.now().minusMinutes(WAIT_MINUTES);
 
 		List<Diary> diaries = diaryRepository
 			.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(threshold);
