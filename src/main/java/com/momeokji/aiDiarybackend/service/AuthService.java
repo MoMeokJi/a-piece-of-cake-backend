@@ -59,12 +59,19 @@ public class AuthService {
 
 	private void revokeAppleTokens(String userId) {
 		for (SocialAccount account : socialAccountRepository.findByMemberId(userId)) {
-			if (account.getProvider() != SocialProvider.APPLE || account.getAppleRefreshToken() == null) {
+			if (account.getProvider() != SocialProvider.APPLE) {
+				continue;
+			}
+			if (account.getAppleRefreshToken() == null) {
+				// 로그인 때 code 교환이 실패했던 계정이다. 애플 쪽 연결은 이용자가 기기 설정에서 직접 끊어야 한다.
+				log.warn("저장된 애플 토큰이 없어 revoke 를 건너뜁니다. memberId={}", userId);
 				continue;
 			}
 			try {
 				boolean revoked = appleAuthClient.revoke(appleTokenCipher.decrypt(account.getAppleRefreshToken()));
-				if (!revoked) {
+				if (revoked) {
+					log.info("애플 토큰 revoke 완료. memberId={}", userId);
+				} else {
 					log.error("애플 토큰 revoke 실패. 탈퇴는 계속 진행합니다. memberId={}", userId);
 				}
 			} catch (RuntimeException e) {
