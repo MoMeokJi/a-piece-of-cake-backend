@@ -67,6 +67,21 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 	}
 
 	/**
+	 * 앱은 구글·애플 계정의 이름을 닉네임 입력란의 초깃값으로 쓴다. 쓰는 데이터를 빠짐없이 밝혀야 한다
+	 * (구글 브랜드 인증이 고지와 실제 사용의 일치를 본다). 앱이 이름을 쓰지 않게 되면 이 문구도 함께 뺀다.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = {"/", "/privacy"})
+	void pagesDiscloseThatTheAccountNameIsUsedAsTheNicknameDefault(String path) throws Exception {
+		String html = body(path);
+
+		assertThat(html).contains("닉네임 입력란");
+		assertThat(html).contains("이름");
+		assertThat(html).doesNotContain("이메일 주소만 이용");
+		assertThat(html).doesNotContain("(이름, 프로필 사진 등)는 저장하지 않습니다");
+	}
+
+	/**
 	 * 영구 삭제 기한은 삭제 스케줄러의 유예 3일 + 실행 주기 1일이다.
 	 * 스케줄러 쪽은 {@code DiaryDeleteSchedulerIntegrationTest} 가 지킨다. 둘 중 하나를 바꾸면 다른 쪽도 바꿔야 한다.
 	 */
