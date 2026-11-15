@@ -1,60 +1,66 @@
 package com.momeokji.aiDiarybackend.controller;
 
-import java.net.URI;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.momeokji.aiDiarybackend.config.SiteProperties;
-
 import io.swagger.v3.oas.annotations.Hidden;
-import lombok.RequiredArgsConstructor;
 
 /**
- * 공개 사이트 경로(토큰 불필요). Google OAuth 동의 화면이 홈페이지·개인정보처리방침·이용약관 링크를
- * 직접 열어 보므로 전부 200 또는 302 여야 한다. 문서는 S3 의 PDF 로 보낸다.
+ * 공개 사이트 페이지(토큰 불필요). Google OAuth 브랜드 인증이 직접 열어 보는 페이지다.
+ *
+ * <p>구글 요건(support.google.com/cloud/answer/13807376, 13806988):
+ * <ul>
+ *   <li>홈페이지는 로그인 없이 열리고, 앱을 식별하고, 기능과 구글 사용자 데이터를 요청하는 이유를 설명하고,
+ *       개인정보처리방침으로 가는 링크가 있어야 한다. 다른 주소로 리다이렉트하면 안 된다.</li>
+ *   <li>개인정보처리방침은 홈페이지와 같은 도메인의 전용 페이지 본문에 HTML 로 있어야 한다.
+ *       구글은 PDF 를 처리하지 못한다. 그래서 S3 의 PDF 로 보내지 않고 여기서 직접 낸다.</li>
+ * </ul>
+ *
+ * <p>문서는 {@code classpath:site/*.html} 에 있고 기동할 때 한 번 읽는다. 없으면 기동에 실패한다.
+ * 방침이나 약관 문구를 바꾸려면 그 파일을 고치고 배포한다.
  */
 @Hidden
 @RestController
-@RequiredArgsConstructor
 public class SiteController {
 
-	static final String HOME_HTML = """
-		<!doctype html>
-		<html lang="ko">
-		<head>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1">
-		<title>조각케이크</title>
-		</head>
-		<body>
-		<h1>조각케이크</h1>
-		<p>하루를 한 조각씩 기록하는 AI 일기 앱입니다.</p>
-		<p><a href="/privacy">개인정보처리방침</a> · <a href="/terms">서비스 이용약관</a></p>
-		</body>
-		</html>
-		""";
+	private static final MediaType HTML_UTF8 = new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8);
 
-	private final SiteProperties siteProperties;
+	private final String home = load("home");
+	private final String privacy = load("privacy");
+	private final String terms = load("terms");
 
-	@GetMapping(value = "/", produces = MediaType.TEXT_HTML_VALUE)
-	public String home() {
-		return HOME_HTML;
+	@GetMapping("/")
+	public ResponseEntity<String> home() {
+		return html(home);
 	}
 
 	@GetMapping("/privacy")
-	public ResponseEntity<Void> privacy() {
-		return redirect(siteProperties.privacyUrl());
+	public ResponseEntity<String> privacy() {
+		return html(privacy);
 	}
 
 	@GetMapping("/terms")
-	public ResponseEntity<Void> terms() {
-		return redirect(siteProperties.termsUrl());
+	public ResponseEntity<String> terms() {
+		return html(terms);
 	}
 
-	private static ResponseEntity<Void> redirect(String url) {
-		return ResponseEntity.status(302).location(URI.create(url)).build();
+	private static ResponseEntity<String> html(String body) {
+		return ResponseEntity.ok().contentType(HTML_UTF8).body(body);
+	}
+
+	private static String load(String name) {
+		String location = "site/" + name + ".html";
+		try {
+			return new ClassPathResource(location).getContentAsString(StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			throw new UncheckedIOException("공개 페이지 파일을 읽을 수 없습니다: classpath:" + location, e);
+		}
 	}
 }

@@ -1,46 +1,85 @@
 package com.momeokji.aiDiarybackend.controller;
 
-import static org.hamcrest.Matchers.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.MediaType;
 
 import com.momeokji.aiDiarybackend.support.IntegrationTestSupport;
 
 /**
- * 공개 사이트 경로. Google OAuth 동의 화면에 등록하는 홈페이지·개인정보처리방침·이용약관 링크라
- * 토큰 없이 200 또는 302 여야 한다.
+ * 공개 사이트 경로. Google OAuth 브랜드 인증이 직접 열어 보는 페이지라 구글 요건을 그대로 검증한다.
+ *
+ * <ul>
+ *   <li>홈페이지: 로그인 없이 열리고, 앱 이름·기능·구글 데이터를 요청하는 이유가 있고, 개인정보처리방침 링크가 있다</li>
+ *   <li>개인정보처리방침: 우리 도메인에서 HTML 본문으로 직접 낸다. PDF 나 다른 도메인으로 리다이렉트하면 안 된다</li>
+ *   <li>개인정보처리방침은 구글 사용자 데이터를 무엇을 받고 어떻게 쓰는지 밝힌다</li>
+ * </ul>
  */
 class SitePagesIntegrationTest extends IntegrationTestSupport {
 
-	static final String PRIVACY_PDF =
-		"https://piece-of-cake-image.s3.ap-northeast-2.amazonaws.com/%EC%A1%B0%EA%B0%81%EC%BC%80%EC%9D%B4%ED%81%AC_%EA%B0%9C%EC%9D%B8%EC%A0%95%EB%B3%B4_%EC%B2%98%EB%A6%AC%EB%B0%A9%EC%B9%A8.pdf";
-	static final String TERMS_PDF =
-		"https://piece-of-cake-image.s3.ap-northeast-2.amazonaws.com/%EC%A1%B0%EA%B0%81%EC%BC%80%EC%9D%B4%ED%81%AC_%EC%84%9C%EB%B9%84%EC%8A%A4_%EC%9D%B4%EC%9A%A9%EC%95%BD%EA%B4%80.pdf";
-
-	@Test
-	void homeIsPublicHtmlWithAppName() throws Exception {
-		mockMvc.perform(get("/"))
+	@ParameterizedTest
+	@ValueSource(strings = {"/", "/privacy", "/terms"})
+	void pagesAreServedAsHtmlWithoutTokenOrRedirect(String path) throws Exception {
+		mockMvc.perform(get(path))
 			.andExpect(status().isOk())
 			.andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-			.andExpect(content().string(containsString("조각케이크")));
+			.andExpect(content().encoding("UTF-8"))
+			.andExpect(header().doesNotExist("Location"));
 	}
 
 	@Test
-	void privacyRedirectsToPdfWithoutToken() throws Exception {
-		mockMvc.perform(get("/privacy"))
-			.andExpect(status().isFound())
-			.andExpect(header().string("Location", PRIVACY_PDF));
+	void homeIdentifiesTheAppExplainsItsPurposeAndLinksToThePolicies() throws Exception {
+		String html = body("/");
+
+		assertThat(html).contains("<title>조각케이크</title>");
+		assertThat(html).contains("<h1>조각케이크</h1>");
+		// 기능 설명
+		assertThat(html).contains("문답 일기", "자유 일기", "공감 메시지");
+		// 구글 사용자 데이터를 왜 요청하는지
+		assertThat(html).contains("Google 계정", "이메일 주소");
+		// 동의 화면에 등록한 주소와 같은 경로의 링크
+		assertThat(html).contains("href=\"/privacy\"", "href=\"/terms\"");
 	}
 
 	@Test
-	void termsRedirectsToPdfWithoutToken() throws Exception {
-		mockMvc.perform(get("/terms"))
-			.andExpect(status().isFound())
-			.andExpect(header().string("Location", TERMS_PDF));
+	void privacyPolicyDisclosesWhatGoogleDataIsUsedAndHow() throws Exception {
+		String html = body("/privacy");
+
+		assertThat(html).contains("<h1>조각케이크 개인정보 처리방침</h1>");
+		assertThat(html).contains("Google", "Apple", "계정 고유 식별자", "이메일 주소");
+		assertThat(html).contains("OpenAI", "회원 탈퇴");
+		assertThat(html).contains("team.momeokji@gmail.com");
+	}
+
+	@Test
+	void termsDescribeSocialLogin() throws Exception {
+		String html = body("/terms");
+
+		assertThat(html).contains("<h1>조각케이크 서비스 이용약관</h1>");
+		assertThat(html).contains("Google 계정 또는 Apple 계정");
+	}
+
+	/** 옛 익명(기기 기반) 앱 시절 문구가 남아 있으면 지금 서비스와 다른 내용을 고지하게 된다. */
+	@ParameterizedTest
+	@ValueSource(strings = {"/privacy", "/terms"})
+	void policiesNoLongerDescribeTheAnonymousApp(String path) throws Exception {
+		String html = body(path);
+
+		assertThat(html).doesNotContain("별도의 회원가입");
+		assertThat(html).doesNotContain("6개월");
+		assertThat(html).doesNotContain("재설치 시 이전 데이터를 복구할 수 없");
+	}
+
+	private String body(String path) throws Exception {
+		return mockMvc.perform(get(path))
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
 	}
 }
