@@ -44,4 +44,19 @@ class OpenApiDocsTest extends IntegrationTestSupport {
 		assertThat(docs.at("/paths/~1diaries~1free/post/description").asText())
 			.contains("429", "FREE");
 	}
+
+	/**
+	 * 운영은 앞단에서 https 를 끝내고 앱에는 http 로 넘긴다. 서버 주소를 비워 두면 springdoc 이 http 주소를 적어
+	 * https 로 연 스웨거의 요청을 브라우저가 막는다(TypeError: Failed to fetch). 상대 주소면 연 페이지의 주소를 그대로 쓴다.
+	 */
+	@Test
+	void apiDocsUseRelativeServerUrlRegardlessOfRequestScheme() throws Exception {
+		String body = mockMvc.perform(get("/v3/api-docs").header("Host", "piece-of-cake.click"))
+			.andExpect(status().isOk())
+			.andReturn().getResponse().getContentAsString();
+		JsonNode servers = objectMapper.readTree(body).path("servers");
+
+		assertThat(servers.size()).isEqualTo(1);
+		assertThat(servers.get(0).path("url").asText()).isEqualTo("/");
+	}
 }
