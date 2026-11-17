@@ -1,5 +1,7 @@
 package com.momeokji.aiDiarybackend.config;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -9,6 +11,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 
 /**
  * Swagger(OpenAPI) 문서 설정.
@@ -93,6 +96,9 @@ public class OpenApiConfig {
 
 		return new OpenAPI()
 			.info(info)
+			// 운영은 앞단에서 https 를 끝내고 http 로 넘겨서, 비워 두면 springdoc 이 http 주소를 적는다.
+			// 그러면 https 로 연 스웨거의 요청을 브라우저가 막는다. 상대 주소는 연 페이지의 주소를 그대로 쓴다.
+			.servers(List.of(new Server().url("/")))
 			.components(new Components()
 				.addSecuritySchemes(ACCESS_TOKEN_SCHEME, accessToken))
 			// 문서 전체에 기본 적용. 인증이 필요 없는 API 는 토큰을 보내도 그대로 동작한다.
