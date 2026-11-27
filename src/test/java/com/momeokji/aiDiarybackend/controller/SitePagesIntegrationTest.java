@@ -113,7 +113,7 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 	void overseasTransferIsDescribedTheSameWayInBothDocuments(String path) throws Exception {
 		String html = body(path);
 
-		assertThat(html).contains("OpenAI, L.L.C.", "privacy@openai.com", "미국");
+		assertThat(html).contains("OpenAI OpCo, LLC", "dsar@openai.com", "미국");
 		assertThat(html).contains("30일 이내 삭제", "AI 모델 학습에 사용되지 않습니다");
 		assertThat(html).contains("저장 후 몇 분 안에 시식평을 작성할 때 암호화된 네트워크를 통해 전송");
 		// 문답 일기 생성 때 지난 일기도 함께 간다(DiaryService.generate 의 reference_sets). 동의문이 이를 빼면 동의 범위가 실제보다 좁아진다.

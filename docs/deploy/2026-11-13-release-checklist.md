@@ -242,4 +242,4 @@
 - [ ] **서버가 나간 뒤에는 `agreedTermsIds` 를 보내지 않는 앱 빌드(2.0.0+7 이하)로 신규 가입이 400 `TERMS_AGREEMENT_REQUIRED` 로 막힌다.** 기존 회원 로그인과 자동 로그인은 영향이 없다. 새 앱 빌드를 바로 이어서 올린다.
 - [ ] 앱 새 빌드로 실기기 확인: 로그인 버튼 → 약관 시트에 4개 항목이 위 순서로 뜬다 → 필수 3개만 체크해 가입 → 마이페이지 알림 토글이 꺼져 있다. 다른 계정으로 4개 모두 체크해 가입 → 토글이 켜져 있다.
 - [ ] 가입 뒤 DB 확인: `SELECT * FROM member_terms_agreement WHERE member_id = '<회원 ID>';` 가 체크한 수만큼.
-- [ ] 방침·약관 문구가 바뀌었다(2026-11-27 판). `/privacy` 5.1 과 `/ai-consent` 의 이전받는 자 이름·연락처(지금 `OpenAI, L.L.C.`, `privacy@openai.com`)를 OpenAI 공식 문서와 대조해 확정한다. OpenAI 개인정보 처리방침에는 `OpenAI OpCo, LLC`, `dsar@openai.com` 으로 나온다(2026-11-27 확인).
+- [x] `/privacy` 5.1 과 `/ai-consent` 의 이전받는 자는 OpenAI 개인정보 처리방침 표기대로 `OpenAI OpCo, LLC`, 연락처 `dsar@openai.com` 이다(2026-11-27 확인). `SitePagesIntegrationTest` 가 두 페이지의 값이 같은지 지킨다.
