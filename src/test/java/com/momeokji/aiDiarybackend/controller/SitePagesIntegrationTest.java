@@ -25,7 +25,7 @@ import com.momeokji.aiDiarybackend.support.IntegrationTestSupport;
 class SitePagesIntegrationTest extends IntegrationTestSupport {
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/", "/privacy", "/terms"})
+	@ValueSource(strings = {"/", "/privacy", "/terms", "/ai-consent"})
 	void pagesAreServedAsHtmlWithoutTokenOrRedirect(String path) throws Exception {
 		mockMvc.perform(get(path))
 			.andExpect(status().isOk())
@@ -102,6 +102,40 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 		assertThat(html).doesNotContain("별도의 회원가입");
 		assertThat(html).doesNotContain("6개월");
 		assertThat(html).doesNotContain("재설치 시 이전 데이터를 복구할 수 없");
+	}
+
+	/**
+	 * 국외 이전 동의문과 방침 5.1 은 같은 사실을 말해야 한다(받는 자, 연락처, 보유 기간, 학습 미사용, 보내지 않는 항목).
+	 * 보유 기간은 {@code OpenAiServiceTest} 가 지키는 {@code store=false} 를 전제로 한다.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = {"/privacy", "/ai-consent"})
+	void overseasTransferIsDescribedTheSameWayInBothDocuments(String path) throws Exception {
+		String html = body(path);
+
+		assertThat(html).contains("OpenAI, L.L.C.", "privacy@openai.com", "미국");
+		assertThat(html).contains("30일 이내 삭제", "AI 모델 학습에 사용되지 않습니다");
+		assertThat(html).contains("암호화된 네트워크를 통해 전송");
+		assertThat(html).contains("이 경우 서비스를 이용할 수 없습니다");
+	}
+
+	@Test
+	void aiConsentListsWhatIsAndIsNotTransferred() throws Exception {
+		String html = body("/ai-consent");
+
+		assertThat(html).contains("<h1>AI 일기 생성을 위한 개인정보 국외 이전 동의</h1>");
+		assertThat(html).contains("문답 답변 내용, 작성한 일기 내용", "계정 정보와 사진은 전송하지 않습니다");
+		assertThat(html).contains("href=\"/privacy\"");
+	}
+
+	/** 앱이 실제로 쓰는 외부 서비스와 계정 삭제 요청 경로는 방침에 있어야 한다(스토어 심사 요건). */
+	@Test
+	void privacyPolicyListsFirebaseAnalyticsAndTheAccountDeletionPage() throws Exception {
+		String html = body("/privacy");
+
+		assertThat(html).contains("Firebase Analytics·Crashlytics");
+		assertThat(html).contains("https://maddening-cello-e93.notion.site/4252fe56bc3380a99ce5d5d0be823857");
+		assertThat(html).contains("href=\"/ai-consent\"");
 	}
 
 	private String body(String path) throws Exception {
