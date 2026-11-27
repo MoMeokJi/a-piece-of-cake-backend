@@ -7,7 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -23,8 +22,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(
 	name = "member_terms_agreement",
-	uniqueConstraints = @UniqueConstraint(name = "uk_member_terms", columnNames = {"member_id", "terms_id"}),
-	indexes = @Index(name = "idx_member_terms_member", columnList = "member_id")
+	// 회원별 조회·삭제도 이 유니크 키의 앞 컬럼(member_id)을 탄다. 별도 인덱스는 두지 않는다.
+	uniqueConstraints = @UniqueConstraint(name = "uk_member_terms", columnNames = {"member_id", "terms_id"})
 )
 public class MemberTermsAgreement {
 

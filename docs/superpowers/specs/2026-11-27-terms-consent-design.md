@@ -68,12 +68,12 @@ CREATE TABLE member_terms_agreement (
     terms_id   BIGINT       NOT NULL,
     agreed_at  DATETIME(6)  NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_member_terms (member_id, terms_id),
-    KEY idx_member_terms_member (member_id)
+    UNIQUE KEY uk_member_terms (member_id, terms_id)
 );
 ```
 
 - 약관을 개정하면 같은 `code` 로 `version` 을 올린 새 행을 만들고 옛 행의 `is_active` 를 끈다. 동의 기록은 `terms_id` 를 가리키므로 어느 버전에 동의했는지가 남는다.
+- 같은 `code` 의 활성 행은 하나여야 한다. 지금은 행을 바꾸는 주체가 SQL 뿐이라 DB 제약이나 검사를 두지 않는다. 관리자 API 를 만들 때 "옛 행 끄기 + 새 행 추가"를 한 트랜잭션으로 묶고 이 규칙을 검사한다. `terms_id` 에 외래 키도 두지 않는다(이 스키마의 다른 테이블과 같다).
 - 초기 데이터(모두 version 1, active):
 
 | display_order | code | title | required | content_path |

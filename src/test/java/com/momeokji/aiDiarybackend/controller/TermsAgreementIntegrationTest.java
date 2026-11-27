@@ -119,6 +119,33 @@ class TermsAgreementIntegrationTest extends IntegrationTestSupport {
 		assertThat(agreementRepository.findByMemberId(me(access).get("memberId").asText())).hasSize(3);
 	}
 
+	/** 형식이 틀린 값은 기존 회원·신규 가입을 가리지 않고 400 이다(본문 역직렬화 단계에서 걸린다). */
+	@Test
+	void malformedIdsAreAValidationError() throws Exception {
+		String token = TestSocialTokens.google("sub-1", "ios-client", "sub-1@gmail.com");
+		for (String ids : List.of("[\"abc\"]", "[true]", "{}")) {
+			String body = "{\"idToken\":\"" + token + "\",\"deviceId\":\"" + DEVICE + "\",\"os\":\"IOS\",\"agreedTermsIds\":" + ids + "}";
+			mockMvc.perform(post("/auth/social/google").contentType(MediaType.APPLICATION_JSON).content(body))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+		}
+		assertNothingCreated();
+	}
+
+	@Test
+	void tooManyIdsAreAValidationError() throws Exception {
+		List<Long> ids = new ArrayList<>(requiredTermsIds());
+		for (long i = 0; i < 50; i++) {
+			ids.add(1_000_000L + i);
+		}
+
+		googleLogin("sub-1", ids)
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+
+		assertNothingCreated();
+	}
+
 	/** 꺼진 옛 버전에 대한 동의는 새 버전의 동의가 아니다. */
 	@Test
 	void consentToASupersededVersionDoesNotCount() throws Exception {

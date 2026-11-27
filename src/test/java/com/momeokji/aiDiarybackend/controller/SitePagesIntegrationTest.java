@@ -115,7 +115,9 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 
 		assertThat(html).contains("OpenAI, L.L.C.", "privacy@openai.com", "미국");
 		assertThat(html).contains("30일 이내 삭제", "AI 모델 학습에 사용되지 않습니다");
-		assertThat(html).contains("암호화된 네트워크를 통해 전송");
+		assertThat(html).contains("저장 후 몇 분 안에 시식평을 작성할 때 암호화된 네트워크를 통해 전송");
+		// 문답 일기 생성 때 지난 일기도 함께 간다(DiaryService.generate 의 reference_sets). 동의문이 이를 빼면 동의 범위가 실제보다 좁아진다.
+		assertThat(html).contains("최근에 작성한 문답 일기(최대 5건)의 문답과 일기 내용을 함께 전송합니다");
 		assertThat(html).contains("이 경우 서비스를 이용할 수 없습니다");
 	}
 
@@ -124,7 +126,7 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 		String html = body("/ai-consent");
 
 		assertThat(html).contains("<h1>AI 일기 생성을 위한 개인정보 국외 이전 동의</h1>");
-		assertThat(html).contains("문답 답변 내용, 작성한 일기 내용", "계정 정보와 사진은 전송하지 않습니다");
+		assertThat(html).contains("문답 질문과 답변 내용, 작성한 일기 내용", "계정 정보와 사진은 전송하지 않습니다");
 		assertThat(html).contains("href=\"/privacy\"");
 	}
 
@@ -136,6 +138,15 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 		assertThat(html).contains("Firebase Analytics·Crashlytics");
 		assertThat(html).contains("https://maddening-cello-e93.notion.site/4252fe56bc3380a99ce5d5d0be823857");
 		assertThat(html).contains("href=\"/ai-consent\"");
+	}
+
+	/** 가입할 때 저장하는 약관 동의 기록도 수집 항목이고, 탈퇴하면 지운다({@code TermsAgreementIntegrationTest}). */
+	@Test
+	void privacyPolicyDisclosesConsentRecords() throws Exception {
+		String html = body("/privacy");
+
+		assertThat(html).contains("약관 동의 기록: 가입할 때 동의한 약관과 동의 일시");
+		assertThat(html).contains("닉네임, 약관 동의 기록은 즉시 삭제합니다");
 	}
 
 	private String body(String path) throws Exception {

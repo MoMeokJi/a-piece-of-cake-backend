@@ -16,4 +16,7 @@ public final class RequestPatterns {
 
 	private RequestPatterns() {
 	}
+
+	/** 로그인 요청의 {@code agreedTermsIds} 최대 개수. 활성 약관은 몇 개뿐이라 넉넉한 상한이다. */
+	public static final int MAX_AGREED_TERMS = 50;
 }

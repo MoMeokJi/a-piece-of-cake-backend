@@ -52,11 +52,6 @@ public class Member {
 	@ColumnDefault("0")
 	private Boolean notificationEnabled;
 
-	/** 기록 알림이 꺼진 회원. */
-	public static Member create(String memberId) {
-		return create(memberId, false);
-	}
-
 	/** @param notificationEnabled 가입할 때 "기록 알림 받기" 약관에 동의했는지 */
 	public static Member create(String memberId, boolean notificationEnabled) {
 		Member member = new Member();

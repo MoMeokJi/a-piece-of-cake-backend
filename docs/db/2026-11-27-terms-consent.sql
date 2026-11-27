@@ -11,7 +11,7 @@
 -- ============================================================
 
 -- 가입 화면 약관 시트의 한 줄. 개정하면 같은 code 로 version 을 올린 새 행을 만들고 옛 행의 is_active 를 끈다.
-CREATE TABLE terms (
+CREATE TABLE IF NOT EXISTS terms (
     id            BIGINT       NOT NULL AUTO_INCREMENT,
     code          VARCHAR(40)  NOT NULL,              -- SERVICE, PRIVACY, AI_OVERSEAS_TRANSFER, RECORD_NOTIFICATION
     version       INT          NOT NULL,              -- 같은 code 안에서 1부터
@@ -26,19 +26,22 @@ CREATE TABLE terms (
 );
 
 -- 회원이 가입할 때 동의한 약관. 탈퇴하면 서버가 지운다.
-CREATE TABLE member_terms_agreement (
+CREATE TABLE IF NOT EXISTS member_terms_agreement (
     id         BIGINT       NOT NULL AUTO_INCREMENT,
     member_id  VARCHAR(255) NOT NULL,
     terms_id   BIGINT       NOT NULL,
     agreed_at  DATETIME(6)  NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uk_member_terms (member_id, terms_id),
-    KEY idx_member_terms_member (member_id)
+    UNIQUE KEY uk_member_terms (member_id, terms_id)   -- 회원별 조회·삭제도 이 키의 앞 컬럼을 탄다
 );
 
 -- 초기 약관. RECORD_NOTIFICATION 에 동의하면 가입 시점에 member.notification_enabled 가 켜진다(코드가 이 code 를 본다).
-INSERT INTO terms (code, version, title, required, display_order, content_path, is_active, created_at) VALUES
-    ('SERVICE',              1, '서비스 이용약관',                              1, 1, '/terms',      1, NOW(6)),
-    ('PRIVACY',              1, '개인정보 수집 및 이용',                        1, 2, '/privacy',    1, NOW(6)),
-    ('AI_OVERSEAS_TRANSFER', 1, 'AI 일기 생성을 위한 개인정보 국외 이전 동의',  1, 3, '/ai-consent', 1, NOW(6)),
-    ('RECORD_NOTIFICATION',  1, '기록 알림 받기',                               0, 4, NULL,          1, NOW(6));
+-- 서버는 DATETIME 을 KST 벽시계 시각으로 읽고 쓴다. DB 세션 타임존이 UTC 여도 KST 로 들어가도록 변환한다.
+-- 이미 있는 (code, version) 은 건너뛰므로 이 파일은 다시 실행해도 안전하다.
+SET @now_kst = CONVERT_TZ(NOW(6), @@session.time_zone, '+09:00');
+
+INSERT IGNORE INTO terms (code, version, title, required, display_order, content_path, is_active, created_at) VALUES
+    ('SERVICE',              1, '서비스 이용약관',                              1, 1, '/terms',      1, @now_kst),
+    ('PRIVACY',              1, '개인정보 수집 및 이용',                        1, 2, '/privacy',    1, @now_kst),
+    ('AI_OVERSEAS_TRANSFER', 1, 'AI 일기 생성을 위한 개인정보 국외 이전 동의',  1, 3, '/ai-consent', 1, @now_kst),
+    ('RECORD_NOTIFICATION',  1, '기록 알림 받기',                               0, 4, NULL,          1, @now_kst);
