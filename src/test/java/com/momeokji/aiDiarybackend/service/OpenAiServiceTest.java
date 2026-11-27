@@ -89,6 +89,22 @@ class OpenAiServiceTest {
 		assertEquals(om.writeValueAsString(inputObj), input.get(1).get("content").asText());
 	}
 
+	/**
+	 * {@code store} 를 생략하면 OpenAI 가 응답과 입력을 30일 이상 보관한다. 개인정보처리방침 5.1 과
+	 * AI 국외 이전 동의문의 보유 기간(30일 이내 삭제)은 항상 {@code false} 로 보내는 것을 전제로 한다.
+	 */
+	@Test
+	void alwaysTellsOpenAiNotToStoreTheResponse() throws Exception {
+		AtomicReference<String> sent = new AtomicReference<>();
+		OpenAiService service = service(config(null), capturing(sent, OUTPUT_RESPONSE));
+
+		service.call("colors", Map.of("text", "x"));
+
+		JsonNode body = om.readTree(sent.get());
+		assertTrue(body.has("store"), body.toString());
+		assertFalse(body.get("store").asBoolean(), body.toString());
+	}
+
 	@Test
 	void omitsMaxOutputTokensWhenNotConfigured() throws Exception {
 		AtomicReference<String> sent = new AtomicReference<>();
