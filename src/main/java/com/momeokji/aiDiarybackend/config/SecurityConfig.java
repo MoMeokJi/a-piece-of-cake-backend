@@ -150,6 +150,7 @@ public class SecurityConfig {
 		RequestMatcher[] publicPaths = {
 			matcher(HttpMethod.POST, "/auth/social/**"),
 			matcher(HttpMethod.POST, "/auth/refresh"),
+			matcher(HttpMethod.GET, "/auth/terms"),
 			matcher(HttpMethod.GET, "/health"),
 			matcher(HttpMethod.GET, "/app/min-version"),
 			// Google OAuth 동의 화면용 공개 사이트 경로

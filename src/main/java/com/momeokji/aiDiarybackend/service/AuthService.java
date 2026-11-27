@@ -13,6 +13,7 @@ import com.momeokji.aiDiarybackend.repository.DiaryColorRepository;
 import com.momeokji.aiDiarybackend.repository.DiaryImageRepository;
 import com.momeokji.aiDiarybackend.repository.DiaryRepository;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
+import com.momeokji.aiDiarybackend.repository.MemberTermsAgreementRepository;
 import com.momeokji.aiDiarybackend.repository.SocialAccountRepository;
 import com.momeokji.aiDiarybackend.service.auth.DeviceSessionService;
 import com.momeokji.aiDiarybackend.service.auth.apple.AppleAuthClient;
@@ -26,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <ol>
  *   <li>애플 계정에 저장된 refresh 토큰이 있으면 revoke 한다(실패해도 계속)</li>
- *   <li>소셜 계정과 기기 세션 행을 지운다 — 이후 refresh 가 불가능해진다</li>
+ *   <li>소셜 계정, 기기 세션, 약관 동의 기록 행을 지운다 — 이후 refresh 가 불가능해진다</li>
  *   <li>일기·색상·이미지와 회원을 soft delete 하고(회원의 닉네임과 알림 설정은 이때 지운다) Redis 유저 데이터를 지운다</li>
  * </ol>
  * 탈퇴 후 같은 소셜 계정으로 로그인하면 새 member_id 로 새로 가입된다.
@@ -44,6 +45,7 @@ public class AuthService {
 	private final DiaryRepository diaryRepository;
 	private final DiaryColorRepository diaryColorRepository;
 	private final DiaryImageRepository diaryImageRepository;
+	private final MemberTermsAgreementRepository memberTermsAgreementRepository;
 	private final TransactionTemplate transactionTemplate;
 
 	public void withdraw(Authentication auth) {
@@ -83,6 +85,7 @@ public class AuthService {
 	private void deleteAccountData(String userId) {
 		socialAccountRepository.deleteByMemberId(userId);
 		deviceSessionService.deleteAllOf(userId);
+		memberTermsAgreementRepository.deleteByMemberId(userId);
 
 		List<Long> aliveDiaryIds = diaryRepository.findAliveIdsByUserId(userId);
 		LocalDateTime now = LocalDateTime.now();

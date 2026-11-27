@@ -1,5 +1,7 @@
 package com.momeokji.aiDiarybackend.dto.request;
 
+import java.util.List;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.AccessLevel;
@@ -26,4 +28,10 @@ public class GoogleLoginRequestDto {
 
 	/** 없을 수 있다(푸시 권한 거부 등). */
 	private String fcmToken;
+
+	/**
+	 * 약관 시트에서 체크한 약관 ID({@code GET /auth/terms} 의 {@code id}). 신규 가입이면 필수 약관이 모두 들어 있어야 하고,
+	 * 빠지면 400 {@code TERMS_AGREEMENT_REQUIRED} 다. 기존 회원의 로그인에서는 읽지 않는다.
+	 */
+	private List<Long> agreedTermsIds;
 }

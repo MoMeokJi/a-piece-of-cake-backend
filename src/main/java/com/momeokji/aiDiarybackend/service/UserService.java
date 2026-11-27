@@ -41,7 +41,7 @@ public class UserService {
 		return member;
 	}
 
-	/** 기록 알림(리마인드·공감) 수신 여부. 가입 직후 약관 체크값과 마이페이지 토글이 같이 쓴다. */
+	/** 기록 알림(리마인드·공감) 수신 여부. 마이페이지 토글이 쓴다. 가입 시점의 값은 약관 동의({@code SignupTerms})로 정해진다. */
 	@Transactional
 	public Member changeNotificationEnabled(String memberId, boolean enabled) {
 		Member member = findValid(memberId);

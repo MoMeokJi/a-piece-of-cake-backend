@@ -47,16 +47,22 @@ public class Member {
 	@Column(name = "nickname", length = 10)
 	private String nickname;
 
-	/** 기록 알림(리마인드·공감 푸시) 수신 여부. 기본 꺼짐. 관리자 전체 공지는 이 값과 무관하다. */
+	/** 기록 알림(리마인드·공감 푸시) 수신 여부. 가입할 때 "기록 알림 받기" 약관에 동의했으면 켜진 채로 시작한다. 관리자 전체 공지는 이 값과 무관하다. */
 	@Column(name = "notification_enabled", nullable = false, columnDefinition = "TINYINT")
 	@ColumnDefault("0")
 	private Boolean notificationEnabled;
 
+	/** 기록 알림이 꺼진 회원. */
 	public static Member create(String memberId) {
+		return create(memberId, false);
+	}
+
+	/** @param notificationEnabled 가입할 때 "기록 알림 받기" 약관에 동의했는지 */
+	public static Member create(String memberId, boolean notificationEnabled) {
 		Member member = new Member();
 		member.memberId = memberId;
 		member.isValid = true;
-		member.notificationEnabled = false;
+		member.notificationEnabled = notificationEnabled;
 		return member;
 	}
 
