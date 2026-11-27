@@ -7,6 +7,8 @@ import com.momeokji.aiDiarybackend.dto.request.DiaryGenerateRequestDto;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -108,6 +110,22 @@ public class RedisService {
 		redis.opsForList().trim(k, 0, MAX_LIST - 1);
 	}
 
+	/**
+	 * 목록에서 {@code ARGV[1]} 과 똑같은 항목을 찾아 {@code ARGV[2]} 로 바꾼다. 찾으면 1, 없으면 0.
+	 * LRANGE 로 읽은 위치에 LSET 하면 그 사이 다른 요청(일기 삭제의 LREM, 새 문답의 LPUSH)이 위치를 밀어
+	 * 이웃 항목을 덮어쓰거나 지운 일기를 되살릴 수 있다. 찾기와 바꾸기를 한 스크립트로 묶어 막는다.
+	 */
+	private static final RedisScript<Long> REPLACE_ITEM = new DefaultRedisScript<>("""
+		local items = redis.call('LRANGE', KEYS[1], 0, -1)
+		for i, v in ipairs(items) do
+		  if v == ARGV[1] then
+		    redis.call('LSET', KEYS[1], i - 1, ARGV[2])
+		    return 1
+		  end
+		end
+		return 0
+		""", Long.class);
+
 	public void updateDiaryContent(String userId, Long diaryId, String newContent) {
 		String k = key(userId);
 		List<String> all = redis.opsForList().range(k, 0, -1);
@@ -115,9 +133,9 @@ public class RedisService {
 			return;
 		}
 
-		for(int i=0; i<all.size(); i++) {
+		for (String item : all) {
 			try{
-				ReferenceSet rs = om.readValue(all.get(i), new TypeReference<ReferenceSet>() {});
+				ReferenceSet rs = om.readValue(item, new TypeReference<ReferenceSet>() {});
 				if (rs.getDiaryId() != null && rs.getDiaryId().equals(diaryId)) {
 					ReferenceSet updated = ReferenceSet.builder()
 						.diaryId(rs.getDiaryId())
@@ -126,10 +144,37 @@ public class RedisService {
 						.createdAt(rs.getCreatedAt())
 						.build();
 					String json = om.writeValueAsString(updated);
-					redis.opsForList().set(k, i, json);
+					// 그사이 지워졌으면(0) 아무것도 하지 않는다 — 지운 일기를 되살리지 않는다.
+					redis.execute(REPLACE_ITEM, List.of(k), item, json);
 					return;
 				}
 			}catch (Exception ignore) {
+			}
+		}
+	}
+
+	/**
+	 * 삭제한 일기의 참조 세트를 지운다. 남겨 두면 지운 일기의 문답과 본문이 다음 문답 일기 생성 때
+	 * OpenAI 로 다시 전송된다(개인정보처리방침 4항). 자유 일기는 참조 세트에 없으므로 아무 일도 하지 않는다.
+	 *
+	 * <p>LREM 은 값이 똑같은 항목을 지우므로 위치가 밀려도 다른 항목을 건드리지 않는다.
+	 * 문답 일기를 전부 지우면 목록이 비는데, 초안 생성 프롬프트(prompts/content.md)는 빈 reference_sets 를 허용한다.
+	 */
+	public void removeDiary(String userId, Long diaryId) {
+		String k = key(userId);
+		List<String> all = redis.opsForList().range(k, 0, -1);
+		if (all == null || all.isEmpty()) {
+			return;
+		}
+		for (String item : all) {
+			ReferenceSet rs;
+			try {
+				rs = om.readValue(item, new TypeReference<ReferenceSet>() {});
+			} catch (Exception e) {
+				continue; // 읽을 수 없는 항목은 어느 일기의 것인지 알 수 없다
+			}
+			if (diaryId.equals(rs.getDiaryId())) {
+				redis.opsForList().remove(k, 0, item);
 			}
 		}
 	}

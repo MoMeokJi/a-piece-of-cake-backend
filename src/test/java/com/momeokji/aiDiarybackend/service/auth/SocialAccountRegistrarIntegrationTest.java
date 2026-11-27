@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import com.momeokji.aiDiarybackend.entity.SocialAccount;
 import com.momeokji.aiDiarybackend.entity.SocialProvider;
 import com.momeokji.aiDiarybackend.repository.MemberRepository;
+import com.momeokji.aiDiarybackend.repository.MemberTermsAgreementRepository;
 import com.momeokji.aiDiarybackend.repository.SocialAccountRepository;
 import com.momeokji.aiDiarybackend.service.auth.social.SocialIdentity;
 import com.momeokji.aiDiarybackend.support.IntegrationTestSupport;
@@ -29,12 +30,16 @@ class SocialAccountRegistrarIntegrationTest extends IntegrationTestSupport {
 	@Autowired
 	MemberRepository memberRepository;
 
+	@Autowired
+	MemberTermsAgreementRepository memberTermsAgreementRepository;
+
 	@Test
 	void registeringSameIdentityTwiceViolatesUniqueConstraint() {
 		SocialIdentity identity = new SocialIdentity(SocialProvider.GOOGLE, "sub-dup", "a@x.com");
-		SocialAccount first = registrar.register(identity);
+		SignupTerms terms = new SignupTerms(requiredTermsIds(), false);
+		SocialAccount first = registrar.register(identity, terms);
 
-		assertThatThrownBy(() -> registrar.register(identity))
+		assertThatThrownBy(() -> registrar.register(identity, terms))
 			.isInstanceOf(DataIntegrityViolationException.class);
 
 		// 첫 번째 행은 그대로 남고, 두 번째 시도의 회원·계정은 REQUIRES_NEW 트랜잭션과 함께 롤백된다.
@@ -42,5 +47,7 @@ class SocialAccountRegistrarIntegrationTest extends IntegrationTestSupport {
 			.map(SocialAccount::getMemberId).contains(first.getMemberId());
 		assertThat(socialAccountRepository.count()).isEqualTo(1);
 		assertThat(memberRepository.count()).isEqualTo(1);
+		// 롤백된 시도의 동의 기록도 남지 않는다.
+		assertThat(memberTermsAgreementRepository.count()).isEqualTo(requiredTermsIds().size());
 	}
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.momeokji.aiDiarybackend.entity.Admin;
+import com.momeokji.aiDiarybackend.entity.Terms;
 import com.momeokji.aiDiarybackend.repository.AdminRepository;
+import com.momeokji.aiDiarybackend.repository.TermsRepository;
 import com.momeokji.aiDiarybackend.service.RedisService;
 import com.momeokji.aiDiarybackend.service.push.FcmSender;
 
@@ -68,7 +71,8 @@ public abstract class IntegrationTestSupport {
 		Map<String, Object> req = Map.of(
 			"idToken", TestSocialTokens.google(sub, "ios-client", sub + "@gmail.com"),
 			"deviceId", TEST_DEVICE_ID,
-			"os", "IOS");
+			"os", "IOS",
+			"agreedTermsIds", requiredTermsIds());
 		String body = mockMvc.perform(MockMvcRequestBuilders.post("/auth/social/google")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(req)))
@@ -90,6 +94,34 @@ public abstract class IntegrationTestSupport {
 			.andExpect(MockMvcResultMatchers.status().isOk())
 			.andReturn().getResponse().getContentAsString();
 		return objectMapper.readTree(body).get("accessToken").asText();
+	}
+
+	@Autowired
+	protected TermsRepository termsRepository;
+
+	/**
+	 * 운영 초기 데이터(docs/db/2026-11-27-terms-consent.sql)와 같은 약관 4개. 매 테스트 뒤 모든 테이블을 비우므로
+	 * 테스트마다 다시 심는다. 약관이 없으면 신규 가입이 503 으로 막힌다.
+	 */
+	@BeforeEach
+	void seedTerms() {
+		LocalDateTime now = LocalDateTime.now();
+		termsRepository.saveAll(List.of(
+			Terms.create("SERVICE", 1, "서비스 이용약관", true, 1, "/terms", now),
+			Terms.create("PRIVACY", 1, "개인정보 수집 및 이용", true, 2, "/privacy", now),
+			Terms.create("AI_OVERSEAS_TRANSFER", 1, "AI 일기 생성을 위한 개인정보 국외 이전 동의", true, 3, "/ai-consent", now),
+			Terms.create(Terms.CODE_RECORD_NOTIFICATION, 1, "기록 알림 받기", false, 4, null, now)));
+	}
+
+	/** 활성 필수 약관 ID. 신규 가입 요청의 {@code agreedTermsIds} 최소값이다. */
+	protected List<Long> requiredTermsIds() {
+		return termsRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream()
+			.filter(Terms::getRequired).map(Terms::getId).toList();
+	}
+
+	/** 선택 항목까지 전부. */
+	protected List<Long> allTermsIds() {
+		return termsRepository.findByIsActiveTrueOrderByDisplayOrderAsc().stream().map(Terms::getId).toList();
 	}
 
 	@AfterEach

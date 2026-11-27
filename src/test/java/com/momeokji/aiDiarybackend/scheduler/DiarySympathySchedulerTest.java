@@ -42,7 +42,7 @@ class DiarySympathySchedulerTest {
 		when(diaryRepository.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(any()))
 			.thenReturn(List.of(diary));
 		when(openAiService.call(eq("sympathy"), any())).thenReturn("따뜻한 한마디");
-		when(memberRepository.findByMemberIdInAndIsValidTrue(Set.of("m1"))).thenReturn(List.of(Member.create("m1")));
+		when(memberRepository.findByMemberIdInAndIsValidTrue(Set.of("m1"))).thenReturn(List.of(Member.create("m1", false)));
 
 		scheduler.fillFeedbackMessages();
 
@@ -56,7 +56,7 @@ class DiarySympathySchedulerTest {
 		when(diaryRepository.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(any()))
 			.thenReturn(List.of(diary));
 		when(openAiService.call(eq("sympathy"), any())).thenReturn("따뜻한 한마디");
-		Member member = Member.create("m1");
+		Member member = Member.create("m1", false);
 		member.changeNotificationEnabled(true);
 		when(memberRepository.findByMemberIdInAndIsValidTrue(Set.of("m1"))).thenReturn(List.of(member));
 
@@ -100,9 +100,9 @@ class DiarySympathySchedulerTest {
 		when(diaryRepository.findTop100ByIsValidTrueAndFeedbackMsgIsNullAndCreatedAtBeforeOrderByCreatedAtAsc(any()))
 			.thenReturn(List.of(d1, d2, d3));
 		when(openAiService.call(eq("sympathy"), any())).thenReturn("한마디");
-		Member m1 = Member.create("m1");
+		Member m1 = Member.create("m1", false);
 		m1.changeNotificationEnabled(true);
-		when(memberRepository.findByMemberIdInAndIsValidTrue(Set.of("m1", "m2"))).thenReturn(List.of(m1, Member.create("m2")));
+		when(memberRepository.findByMemberIdInAndIsValidTrue(Set.of("m1", "m2"))).thenReturn(List.of(m1, Member.create("m2", false)));
 
 		scheduler.fillFeedbackMessages();
 

@@ -93,7 +93,8 @@ class UserIntegrationTest extends IntegrationTestSupport {
 		Map<String, Object> req = Map.of(
 			"idToken", TestSocialTokens.google(sub, "ios-client", sub + "@gmail.com"),
 			"deviceId", DEVICE,
-			"os", "IOS");
+			"os", "IOS",
+			"agreedTermsIds", requiredTermsIds());
 		String body = mockMvc.perform(post("/auth/social/google").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(req)))
 			.andExpect(status().isOk())

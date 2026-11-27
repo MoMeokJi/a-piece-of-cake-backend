@@ -1,5 +1,6 @@
 package com.momeokji.aiDiarybackend.service.auth;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +13,7 @@ import com.momeokji.aiDiarybackend.entity.SocialProvider;
 import com.momeokji.aiDiarybackend.repository.SocialAccountRepository;
 import com.momeokji.aiDiarybackend.seed.RefsetSeedLoader;
 import com.momeokji.aiDiarybackend.service.RedisService;
+import com.momeokji.aiDiarybackend.service.TermsService;
 import com.momeokji.aiDiarybackend.service.auth.apple.AppleAuthClient;
 import com.momeokji.aiDiarybackend.service.auth.apple.AppleTokenCipher;
 import com.momeokji.aiDiarybackend.service.auth.social.AppleIdTokenVerifier;
@@ -25,7 +27,8 @@ import lombok.extern.slf4j.Slf4j;
  * 소셜 로그인(스펙 6.1 처리 순서).
  * <ol>
  *   <li>소셜 토큰을 검증하고 {@code (provider, sub)} 를 얻는다</li>
- *   <li>소셜 계정을 찾고, 없으면 회원과 함께 만든다(동시 첫 로그인은 재조회로 흡수). 신규면 refsets 시드</li>
+ *   <li>소셜 계정을 찾고, 없으면 필수 약관 동의를 검증한 뒤 회원·동의 기록과 함께 만든다
+ *       (동시 첫 로그인은 재조회로 흡수). 신규면 refsets 시드</li>
  *   <li>애플이면 저장된 refresh 토큰이 없을 때 code 교환을 시도한다(실패해도 로그인은 진행)</li>
  *   <li>기기 세션을 upsert 하고 토큰 한 쌍을 발급한다</li>
  * </ol>
@@ -45,21 +48,23 @@ public class SocialLoginService {
 	private final AppleTokenCipher appleTokenCipher;
 	private final RedisService redisService;
 	private final RefsetSeedLoader refsetSeedLoader;
+	private final TermsService termsService;
 
 	public SocialLoginResult loginWithGoogle(GoogleLoginRequestDto req) {
 		SocialIdentity identity = googleIdTokenVerifier.verify(req.getIdToken());
-		return login(identity, req.getDeviceId(), req.getOs(), req.getFcmToken(), null);
+		return login(identity, req.getDeviceId(), req.getOs(), req.getFcmToken(), null, req.getAgreedTermsIds());
 	}
 
 	public SocialLoginResult loginWithApple(AppleLoginRequestDto req) {
 		SocialIdentity identity = appleIdTokenVerifier.verify(req.getIdentityToken(), req.getNonce());
-		return login(identity, req.getDeviceId(), req.getOs(), req.getFcmToken(), req.getAuthorizationCode());
+		return login(identity, req.getDeviceId(), req.getOs(), req.getFcmToken(), req.getAuthorizationCode(),
+			req.getAgreedTermsIds());
 	}
 
 	private SocialLoginResult login(SocialIdentity identity, String deviceId, String os, String fcmToken,
-		String appleAuthorizationCode) {
+		String appleAuthorizationCode, List<Long> agreedTermsIds) {
 
-		ResolvedAccount resolved = resolveAccount(identity);
+		ResolvedAccount resolved = resolveAccount(identity, agreedTermsIds);
 		SocialAccount account = resolved.account();
 
 		if (resolved.newMember()) {
@@ -76,8 +81,13 @@ public class SocialLoginService {
 		return new SocialLoginResult(tokens, resolved.newMember());
 	}
 
-	/** 기존 계정이면 email 만 보강하고, 없으면 만든다. 동시에 만들다 유니크 위반이 나면 상대가 만든 행을 쓴다. */
-	private ResolvedAccount resolveAccount(SocialIdentity identity) {
+	/**
+	 * 기존 계정이면 email 만 보강하고, 없으면 만든다. 동시에 만들다 유니크 위반이 나면 상대가 만든 행을 쓴다.
+	 *
+	 * <p>약관 동의는 새로 가입할 때만 본다. 기존 회원이 다시 로그인하며 보낸 값은 읽지 않으므로
+	 * 동의 기록도 알림 설정도 바뀌지 않는다(알림은 마이페이지에서 바꾼다).
+	 */
+	private ResolvedAccount resolveAccount(SocialIdentity identity, List<Long> agreedTermsIds) {
 		Optional<SocialAccount> existing = find(identity);
 		if (existing.isPresent()) {
 			// 애플 재로그인처럼 email 이 없는 토큰이면 쓰기 트랜잭션 자체를 열지 않는다.
@@ -86,8 +96,10 @@ public class SocialLoginService {
 			}
 			return new ResolvedAccount(existing.get(), false);
 		}
+		// 회원을 만들기 전에 검증한다. 거절되면 아무 행도 남지 않아 같은 계정으로 다시 가입할 수 있다.
+		SignupTerms signupTerms = termsService.resolveForSignup(agreedTermsIds);
 		try {
-			return new ResolvedAccount(registrar.register(identity), true);
+			return new ResolvedAccount(registrar.register(identity, signupTerms), true);
 		} catch (DataIntegrityViolationException e) {
 			SocialAccount raced = find(identity).orElseThrow(() -> e);
 			log.info("동시 첫 로그인으로 유니크 위반 → 기존 회원으로 처리. provider={}", identity.provider());

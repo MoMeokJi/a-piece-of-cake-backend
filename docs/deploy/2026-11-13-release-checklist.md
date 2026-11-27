@@ -226,3 +226,20 @@
   - [ ] S3 버킷(`piece-of-cake-image`)의 **버전 관리**가 꺼져 있는지. 켜져 있으면 삭제해도 이전 버전이 남는다.
   - [ ] RDS **자동 백업·스냅샷 보관 기간**. 백업에는 그 기간만큼 지워진 일기가 남는다. 길다면 방침에 백업 보관 기간을 적는 것을 검토한다.
   - [ ] 삭제 스케줄러는 매일 새벽 2시(KST)에 **서버가 떠 있어야** 돈다. 그 시각에 내려가 있으면 그날은 건너뛰고 다음 날 지운다.
+
+## 10. 약관 목록·동의 기록 (feat/terms-consent, 2026-11-27)
+
+스펙: `docs/superpowers/specs/2026-11-27-terms-consent-design.md`. 순서를 지킨다: **SQL → 서버 → 앱**.
+
+- [ ] 운영 DB 에 `docs/db/2026-11-27-terms-consent.sql` 실행. `terms`, `member_terms_agreement` 테이블과 초기 약관 4개를 만든다. 테이블이 없으면 새 서버가 기동하지 않고(`ddl-auto=validate`), INSERT 를 빼먹으면 신규 가입이 503 `TERMS_NOT_CONFIGURED` 로 막힌다.
+- [ ] 실행 확인: `SELECT id, code, version, title, required, display_order, content_path, is_active FROM terms ORDER BY display_order;` 가 4행.
+- [ ] 서버 배포 뒤 확인:
+  ```bash
+  curl -s https://piece-of-cake.click/auth/terms
+  curl -s -o /dev/null -w "%{http_code} %{content_type}\n" https://piece-of-cake.click/ai-consent
+  ```
+  첫 번째는 약관 4개(서비스 이용약관, 개인정보 수집 및 이용, AI 일기 생성을 위한 개인정보 국외 이전 동의, 기록 알림 받기), 두 번째는 `200 text/html;charset=UTF-8`.
+- [ ] **서버가 나간 뒤에는 `agreedTermsIds` 를 보내지 않는 앱 빌드(2.0.0+7 이하)로 신규 가입이 400 `TERMS_AGREEMENT_REQUIRED` 로 막힌다.** 기존 회원 로그인과 자동 로그인은 영향이 없다. 새 앱 빌드를 바로 이어서 올린다.
+- [ ] 앱 새 빌드로 실기기 확인: 로그인 버튼 → 약관 시트에 4개 항목이 위 순서로 뜬다 → 필수 3개만 체크해 가입 → 마이페이지 알림 토글이 꺼져 있다. 다른 계정으로 4개 모두 체크해 가입 → 토글이 켜져 있다.
+- [ ] 가입 뒤 DB 확인: `SELECT * FROM member_terms_agreement WHERE member_id = '<회원 ID>';` 가 체크한 수만큼.
+- [x] `/privacy` 5.1 과 `/ai-consent` 의 이전받는 자는 OpenAI 개인정보 처리방침 표기대로 `OpenAI OpCo, LLC`, 연락처 `dsar@openai.com` 이다(2026-11-27 확인). `SitePagesIntegrationTest` 가 두 페이지의 값이 같은지 지킨다.
