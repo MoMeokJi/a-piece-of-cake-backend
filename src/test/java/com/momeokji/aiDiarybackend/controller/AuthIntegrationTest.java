@@ -307,6 +307,7 @@ class AuthIntegrationTest extends IntegrationTestSupport {
 		req.put("idToken", TestSocialTokens.google(sub, GOOGLE_AUD, sub + "@gmail.com"));
 		req.put("deviceId", deviceId);
 		req.put("os", "IOS");
+		req.put("agreedTermsIds", requiredTermsIds());
 		if (fcmToken != null) {
 			req.put("fcmToken", fcmToken);
 		}
@@ -320,6 +321,7 @@ class AuthIntegrationTest extends IntegrationTestSupport {
 		req.put("nonce", RAW_NONCE);
 		req.put("deviceId", deviceId);
 		req.put("os", "IOS");
+		req.put("agreedTermsIds", requiredTermsIds());
 		return req;
 	}
 

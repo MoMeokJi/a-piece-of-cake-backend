@@ -25,7 +25,7 @@ import com.momeokji.aiDiarybackend.support.IntegrationTestSupport;
 class SitePagesIntegrationTest extends IntegrationTestSupport {
 
 	@ParameterizedTest
-	@ValueSource(strings = {"/", "/privacy", "/terms"})
+	@ValueSource(strings = {"/", "/privacy", "/terms", "/ai-consent"})
 	void pagesAreServedAsHtmlWithoutTokenOrRedirect(String path) throws Exception {
 		mockMvc.perform(get(path))
 			.andExpect(status().isOk())
@@ -102,6 +102,51 @@ class SitePagesIntegrationTest extends IntegrationTestSupport {
 		assertThat(html).doesNotContain("별도의 회원가입");
 		assertThat(html).doesNotContain("6개월");
 		assertThat(html).doesNotContain("재설치 시 이전 데이터를 복구할 수 없");
+	}
+
+	/**
+	 * 국외 이전 동의문과 방침 5.1 은 같은 사실을 말해야 한다(받는 자, 연락처, 보유 기간, 학습 미사용, 보내지 않는 항목).
+	 * 보유 기간은 {@code OpenAiServiceTest} 가 지키는 {@code store=false} 를 전제로 한다.
+	 */
+	@ParameterizedTest
+	@ValueSource(strings = {"/privacy", "/ai-consent"})
+	void overseasTransferIsDescribedTheSameWayInBothDocuments(String path) throws Exception {
+		String html = body(path);
+
+		assertThat(html).contains("OpenAI OpCo, LLC", "dsar@openai.com", "미국");
+		assertThat(html).contains("30일 이내 삭제", "AI 모델 학습에 사용되지 않습니다");
+		assertThat(html).contains("저장 후 몇 분 안에 시식평을 작성할 때 암호화된 네트워크를 통해 전송");
+		// 문답 일기 생성 때 지난 일기도 함께 간다(DiaryService.generate 의 reference_sets). 동의문이 이를 빼면 동의 범위가 실제보다 좁아진다.
+		assertThat(html).contains("최근에 작성한 문답 일기(최대 5건)의 문답과 일기 내용을 함께 전송합니다");
+		assertThat(html).contains("이 경우 서비스를 이용할 수 없습니다");
+	}
+
+	@Test
+	void aiConsentListsWhatIsAndIsNotTransferred() throws Exception {
+		String html = body("/ai-consent");
+
+		assertThat(html).contains("<h1>AI 일기 생성을 위한 개인정보 국외 이전 동의</h1>");
+		assertThat(html).contains("문답 질문과 답변 내용, 작성한 일기 내용", "계정 정보와 사진은 전송하지 않습니다");
+		assertThat(html).contains("href=\"/privacy\"");
+	}
+
+	/** 앱이 실제로 쓰는 외부 서비스와 계정 삭제 요청 경로는 방침에 있어야 한다(스토어 심사 요건). */
+	@Test
+	void privacyPolicyListsFirebaseAnalyticsAndTheAccountDeletionPage() throws Exception {
+		String html = body("/privacy");
+
+		assertThat(html).contains("Firebase Analytics·Crashlytics");
+		assertThat(html).contains("https://maddening-cello-e93.notion.site/4252fe56bc3380a99ce5d5d0be823857");
+		assertThat(html).contains("href=\"/ai-consent\"");
+	}
+
+	/** 가입할 때 저장하는 약관 동의 기록도 수집 항목이고, 탈퇴하면 지운다({@code TermsAgreementIntegrationTest}). */
+	@Test
+	void privacyPolicyDisclosesConsentRecords() throws Exception {
+		String html = body("/privacy");
+
+		assertThat(html).contains("약관 동의 기록: 가입할 때 동의한 약관과 동의 일시");
+		assertThat(html).contains("닉네임, 약관 동의 기록은 즉시 삭제합니다");
 	}
 
 	private String body(String path) throws Exception {

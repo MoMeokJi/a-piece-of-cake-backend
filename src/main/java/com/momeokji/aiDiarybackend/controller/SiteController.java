@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.Hidden;
  *
  * <p>문서는 {@code classpath:site/*.html} 에 있고 기동할 때 한 번 읽는다. 없으면 기동에 실패한다.
  * 방침이나 약관 문구를 바꾸려면 그 파일을 고치고 배포한다.
+ * OpenAI 로 보내는 항목이나 보유 기간이 바뀌면 {@code privacy.html} 5.1 과 {@code ai-consent.html} 을 함께 고친다.
  */
 @Hidden
 @RestController
@@ -35,6 +36,7 @@ public class SiteController {
 	private final String home = load("home");
 	private final String privacy = load("privacy");
 	private final String terms = load("terms");
+	private final String aiConsent = load("ai-consent");
 
 	@GetMapping("/")
 	public ResponseEntity<String> home() {
@@ -49,6 +51,12 @@ public class SiteController {
 	@GetMapping("/terms")
 	public ResponseEntity<String> terms() {
 		return html(terms);
+	}
+
+	/** 가입 때 필수로 동의받는 "AI 일기 생성을 위한 개인정보 국외 이전 동의" 본문. 약관 시트의 보기 버튼이 연다. */
+	@GetMapping("/ai-consent")
+	public ResponseEntity<String> aiConsent() {
+		return html(aiConsent);
 	}
 
 	private static ResponseEntity<String> html(String body) {

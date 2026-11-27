@@ -41,8 +41,9 @@ public class UserController {
 
 	/** 기록 알림 수신 on/off. 리마인드와 공감 알림을 함께 제어한다. */
 	@Operation(summary = "기록 알림 수신 on/off", description = """
-		리마인드 알림과 공감(시식평) 알림을 토글 하나로 함께 제어한다. 가입 직후 기본값은 꺼짐이며,
-		앱은 약관의 "[선택] 기록 알림 받기" 체크값을 가입 직후 이 API 로 보낸다. 관리자 전체 공지는 이 값과 무관하다.
+		리마인드 알림과 공감(시식평) 알림을 토글 하나로 함께 제어한다. 마이페이지 토글이 쓴다.
+		가입 시점의 값은 약관 시트의 "기록 알림 받기" 동의 여부로 서버가 정하므로(로그인 요청의 `agreedTermsIds`),
+		가입 직후 이 API 를 따로 부를 필요가 없다. 관리자 전체 공지는 이 값과 무관하다.
 		""")
 	@PutMapping("/me/notification")
 	public ResponseEntity<NotificationResponseDto> changeNotification(@Validated @RequestBody NotificationUpdateRequestDto req,

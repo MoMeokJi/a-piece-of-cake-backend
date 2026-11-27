@@ -57,8 +57,8 @@ class DeviceSessionServiceTest {
 		clock = new MutableClock(Instant.now());
 		service = new DeviceSessionService(repo, memberRepository, new AccessTokenIssuer(props, clock), props, clock);
 		// rotate 는 유효 회원인지 확인하므로 테스트에서 쓰는 회원을 미리 만들어 둔다.
-		memberRepository.save(Member.create("m1"));
-		memberRepository.save(Member.create("m2"));
+		memberRepository.save(Member.create("m1", false));
+		memberRepository.save(Member.create("m2", false));
 	}
 
 	@Test

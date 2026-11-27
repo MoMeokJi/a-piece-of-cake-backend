@@ -187,7 +187,8 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 	private JsonNode googleLogin(String sub, String deviceId) throws Exception {
 		String body = mockMvc.perform(post("/auth/social/google").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
-					"idToken", TestSocialTokens.google(sub, "ios-client", null), "deviceId", deviceId, "os", "IOS"))))
+					"idToken", TestSocialTokens.google(sub, "ios-client", null), "deviceId", deviceId, "os", "IOS",
+					"agreedTermsIds", allTermsIds()))))
 			.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 		return objectMapper.readTree(body);
 	}
@@ -196,7 +197,8 @@ class WithdrawIntegrationTest extends IntegrationTestSupport {
 		String body = mockMvc.perform(post("/auth/social/apple").contentType(MediaType.APPLICATION_JSON)
 				.content(objectMapper.writeValueAsString(Map.of(
 					"identityToken", TestSocialTokens.apple(sub, "com.momeokji.cake", RefreshTokens.sha256Hex("n"), null),
-					"authorizationCode", code, "nonce", "n", "deviceId", deviceId, "os", "IOS"))))
+					"authorizationCode", code, "nonce", "n", "deviceId", deviceId, "os", "IOS",
+					"agreedTermsIds", requiredTermsIds()))))
 			.andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 		return objectMapper.readTree(body);
 	}
