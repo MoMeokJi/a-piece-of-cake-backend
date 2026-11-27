@@ -1,7 +1,7 @@
 # 약관 목록·동의 기록을 서버에서 관리
 
 작성일: 2026-11-27
-브랜치: `feat/terms-consent` (서버), 앱은 `a-piece-of-cake-app` 의 `feat/terms-consent`
+브랜치: `feat/terms-consent` (서버). 앱은 이 저장소 작업에 포함하지 않는다. 앱 세션에 전달문으로 넘긴다(5절이 그 내용이다).
 
 ## 1. 왜 하는가
 
@@ -149,7 +149,9 @@ CREATE TABLE member_terms_agreement (
 - 탈퇴 후 동의 기록 없음.
 - 통합 테스트는 매 테스트 뒤 모든 테이블을 비우므로, `IntegrationTestSupport` 가 테스트 전에 초기 약관을 심고 `loginAsMember` 가 필수 약관 ID 를 보내도록 바꾼다.
 
-## 5. 앱 설계 (`a-piece-of-cake-app`)
+## 5. 앱에 전달할 내용 (`a-piece-of-cake-app`)
+
+앱은 피그마를 보는 별도 세션이 구현한다. 아래는 서버 계약에서 따라 나오는 요구이고, 화면 구성과 클래스 설계는 앱 쪽이 정한다.
 
 - 약관 목록을 받는 API·모델·리포지토리를 추가한다(`GET /auth/terms`, 인증 헤더 없음).
 - `TermsSheet` 는 받은 목록으로 그린다.
