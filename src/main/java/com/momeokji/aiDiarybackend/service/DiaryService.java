@@ -352,6 +352,10 @@ public class DiaryService {
 		if (updated == 0) {
 			throw new IllegalStateException("이미 삭제되었거나 권한이 없습니다.");
 		}
+
+		// 마지막에 둔다. Redis 가 실패하면 예외가 올라가 위의 삭제 표시도 롤백되고, 앱은 다시 시도할 수 있다.
+		// 조용히 넘기면 지운 일기가 참조 세트에 남아 OpenAI 로 계속 전송된다.
+		redisService.removeDiary(userId, diaryId);
 	}
 
 	@Transactional

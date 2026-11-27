@@ -2,6 +2,8 @@ package com.momeokji.aiDiarybackend.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -52,6 +54,37 @@ class DiaryIntegrationTest extends DiaryTestSupport {
 		mockMvc.perform(delete("/diaries/999").header(AUTHORIZATION, "Bearer " + token))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.code").value("DIARY_NOT_FOUND"));
+	}
+
+	/**
+	 * 문답 일기는 Redis 참조 세트에도 문답과 본문이 들어 있고, 다음 문답 일기를 만들 때 OpenAI 로 전송된다.
+	 * 일기를 지우면 참조 세트에서도 지워야 방침 4항(삭제한 일기는 4일 이내 영구 삭제)이 지켜진다.
+	 */
+	@Test
+	void deletingADiaryAlsoRemovesItFromTheReferenceSets() throws Exception {
+		String token = loginAsMember("sub-1");
+		String memberId = memberIdOf(token);
+		Diary d = insertDiary(memberId, LocalDateTime.of(2025, 9, 16, 21, 12), DiaryType.QNA);
+
+		mockMvc.perform(delete("/diaries/" + d.getDiaryId()).header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isNoContent());
+
+		verify(redisService).removeDiary(memberId, d.getDiaryId());
+	}
+
+	/** 참조 세트를 못 지웠는데 삭제가 성공했다고 답하면 안 된다. 삭제 표시를 되돌려 앱이 다시 시도할 수 있게 한다. */
+	@Test
+	void diaryStaysWhenTheReferenceSetCannotBeRemoved() throws Exception {
+		String token = loginAsMember("sub-1");
+		String memberId = memberIdOf(token);
+		Diary d = insertDiary(memberId, LocalDateTime.of(2025, 9, 16, 21, 12), DiaryType.QNA);
+		doThrow(new IllegalStateException("redis down")).when(redisService).removeDiary(memberId, d.getDiaryId());
+
+		mockMvc.perform(delete("/diaries/" + d.getDiaryId()).header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().is5xxServerError());
+
+		mockMvc.perform(get("/diaries/" + d.getDiaryId()).header(AUTHORIZATION, "Bearer " + token))
+			.andExpect(status().isOk());
 	}
 
 	@Test

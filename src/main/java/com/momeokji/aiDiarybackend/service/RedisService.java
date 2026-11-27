@@ -134,6 +134,29 @@ public class RedisService {
 		}
 	}
 
+	/**
+	 * 삭제한 일기의 참조 세트를 지운다. 남겨 두면 지운 일기의 문답과 본문이 다음 문답 일기 생성 때
+	 * OpenAI 로 다시 전송된다(개인정보처리방침 4항). 자유 일기는 참조 세트에 없으므로 아무 일도 하지 않는다.
+	 */
+	public void removeDiary(String userId, Long diaryId) {
+		String k = key(userId);
+		List<String> all = redis.opsForList().range(k, 0, -1);
+		if (all == null || all.isEmpty()) {
+			return;
+		}
+		for (String item : all) {
+			ReferenceSet rs;
+			try {
+				rs = om.readValue(item, new TypeReference<ReferenceSet>() {});
+			} catch (Exception e) {
+				continue; // 읽을 수 없는 항목은 어느 일기의 것인지 알 수 없다
+			}
+			if (diaryId.equals(rs.getDiaryId())) {
+				redis.opsForList().remove(k, 0, item);
+			}
+		}
+	}
+
 	public void deleteUserData(String userId) {
 		redis.delete(key(userId));
 	}
